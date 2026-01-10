@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ELBDRAWY System (Online)</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* --- Themes Variables --- */
+        :root {
+            --primary: #2563eb; --bg: #f1f5f9; --card-bg: #ffffff; --text: #0f172a;
+            --band-head: #cbd5e1; --border: #e2e8f0; --success: #059669; --danger: #ef4444;
+            --shadow: rgba(0,0,0,0.05);
+        }
+        body.dark-mode {
+            --primary: #3b82f6; --bg: #0f172a; --card-bg: #1e293b; --text: #f8fafc;
+            --band-head: #334155; --border: #475569; --shadow: rgba(0,0,0,0.3);
+        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 15px; font-size: 14px; transition: 0.3s; }
+
+        /* Loading Indicator */
+        #loadingBar {
+            position: fixed; top: 0; left: 0; width: 0%; height: 4px; background: #2563eb; z-index: 10000; transition: 0.3s;
+        }
+
+        /* --- Login Screen --- */
+        #loginScreen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #0f172a; z-index: 9999;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            color: white;
+        }
+        .login-box { background: #1e293b; padding: 40px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center; border: 1px solid #334155; width: 300px; }
+        .login-input { width: 100%; padding: 10px; margin: 15px 0; border-radius: 6px; border: 1px solid #475569; background: #0f172a; color: white; text-align: center; font-size: 1.2em; outline: none; box-sizing: border-box; }
+        .login-input:focus { border-color: #3b82f6; }
+        .login-btn { width: 100%; padding: 10px; background: #2563eb; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 1.1em; font-weight: bold; transition: 0.2s; }
+        .login-btn:hover { background: #1d4ed8; }
+        .error-msg { color: #ef4444; margin-top: 10px; display: none; font-size: 0.9em; }
+
+        /* --- Layout --- */
+        .main-content { display: none; }
+        .header-container { max-width: 1600px; margin: 0 auto 20px auto; display: flex; flex-direction: column; gap: 15px; }
+        .stats-dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; background: var(--card-bg); padding: 15px; border-radius: 12px; box-shadow: 0 4px 6px var(--shadow); border: 1px solid var(--border); }
+        .stat-item { display: flex; flex-direction: column; align-items: center; padding: 10px; border-radius: 8px; background: var(--bg); }
+        .stat-label { font-size: 0.9em; opacity: 0.8; margin-bottom: 5px; }
+        .stat-value { font-size: 1.5em; font-weight: bold; color: var(--primary); }
+        
+        .main-controls { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; background: var(--card-bg); padding: 10px; border-radius: 12px; border: 1px solid var(--border); }
+        .left-controls, .right-controls { display: flex; gap: 8px; flex-wrap: wrap; }
+
+        .btn { background: var(--bg); color: var(--text); border: 1px solid var(--border); padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; gap: 6px; transition: 0.2s; font-weight: 500; }
+        .btn:hover { background: var(--primary); color: white; border-color: var(--primary); }
+        .btn-primary { background: var(--primary); color: white; border: none; }
+        .btn-success { background: var(--success); color: white; border: none; }
+        .btn-icon-only { padding: 8px; }
+        
+        /* حالة الاتصال */
+        .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 0.8em; font-weight: bold; display: flex; align-items: center; gap: 5px; }
+        .status-online { background: #dcfce7; color: #166534; }
+        .status-offline { background: #fee2e2; color: #991b1b; }
+
+        .search-box { background: var(--bg); color: var(--text); border: 1px solid var(--border); padding: 8px 15px; border-radius: 6px; outline: none; min-width: 250px; }
+        .search-box:focus { border-color: var(--primary); }
+
+        /* --- Editor & Grid --- */
+        #editorSection { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 800px; background: var(--card-bg); padding: 20px; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); border: 1px solid var(--border); z-index: 1000; }
+        .overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; backdrop-filter: blur(3px); }
+        textarea { width: 100%; height: 300px; padding: 15px; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 8px; resize: vertical; font-family: monospace; box-sizing: border-box; }
+
+        .bands-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; max-width: 1600px; margin: 0 auto; align-items: start; }
+        .band-column { background: var(--border); border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; border-top: 4px solid var(--primary); transition: all 0.3s; }
+        .band-column[data-name="Duplicate_Found"] { border-top-color: #f59e0b; }
+        .band-header { background: var(--band-head); padding: 10px 15px; font-weight: bold; color: var(--text); display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none; }
+        .band-copy-btn { background: rgba(255,255,255,0.2); border: none; color: var(--text); border-radius: 4px; padding: 4px 8px; font-size: 0.8rem; cursor: pointer; }
+        .band-copy-btn:hover { background: var(--primary); color: white; }
+        .band-body { padding: 10px; display: flex; flex-direction: column; gap: 10px; background: var(--bg); }
+        .collapsed .band-body { display: none; }
+
+        .account-card { background: var(--card-bg); padding: 10px; border-radius: 6px; box-shadow: 0 1px 2px var(--shadow); border: 1px solid var(--border); position: relative; transition: transform 0.2s; }
+        .account-card:hover { transform: translateY(-2px); border-color: var(--primary); }
+
+        /* List View */
+        .list-view .bands-container { grid-template-columns: 1fr; max-width: 1000px; }
+        .list-view .band-column { background: transparent; border: none; border-top: none; }
+        .list-view .band-header { border-radius: 8px; margin-bottom: 5px; }
+        .list-view .band-body { padding: 0; background: transparent; gap: 5px; }
+        .list-view .account-card { display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr auto; align-items: center; gap: 10px; padding: 5px 15px; }
+        .list-view .data-row { background: transparent; border: none; margin: 0; }
+        .list-view .acc-top { margin: 0; display: contents; }
+        .list-view .delete-btn { margin-left: auto; }
+        .list-view .counter-row { margin: 0; background: transparent; border: none; padding: 0; justify-content: flex-end; }
+        .list-view .icon-btn { display: none; }
+
+        /* Components */
+        .acc-name-btn { background: none; border: none; font-weight: bold; color: var(--primary); font-size: 1rem; cursor: pointer; text-align: right; padding: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .acc-name-btn:hover { text-decoration: underline; }
+        .combo-btn { background: var(--bg); color: var(--text); border: 1px solid var(--border); padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; cursor: pointer; margin-right: 5px; }
+        .combo-btn:hover { background: var(--primary); color: white; }
+        .data-text { font-family: monospace; color: var(--text); opacity: 0.8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        
+        .counter-row { display: flex; align-items: center; justify-content: space-between; background: rgba(5, 150, 105, 0.1); border: 1px solid rgba(5, 150, 105, 0.3); border-radius: 4px; padding: 4px; margin-top: 8px; }
+        .counter-input { width: 50px; background: transparent; border: none; color: var(--success); font-weight: bold; text-align: center; font-family: monospace; font-size: 1.1em; }
+        .counter-btn { width: 24px; height: 24px; border-radius: 4px; border: none; cursor: pointer; color: white; font-weight: bold; display: flex; align-items: center; justify-content: center; }
+        .c-plus { background: var(--success); }
+        .c-minus { background: var(--danger); }
+
+        #toast { visibility: hidden; min-width: 250px; background-color: #333; color: #fff; text-align: center; border-radius: 8px; padding: 12px; position: fixed; z-index: 2000; left: 50%; bottom: 30px; transform: translateX(-50%); display: flex; align-items: center; justify-content: space-between; gap: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        #toast.show { visibility: visible; animation: fadein 0.3s; }
+        .undo-btn { background: white; color: #333; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
+    </style>
+</head>
+<body>
+    <div id="loadingBar"></div>
+
+    <div id="loginScreen">
+        <div class="login-box">
+            <h2 style="margin:0 0 20px 0; color:#3b82f6;">ELBDRAWY ONLINE</h2>
+            <div style="font-size:3em; margin-bottom:20px;">🌐</div>
+            <p>أدخل كلمة المرور للمتابعة</p>
+            <input type="password" id="passInput" class="login-input" placeholder="Password">
+            <button class="login-btn" onclick="checkLogin()">دخول</button>
+            <div id="loginError" class="error-msg">كلمة المرور غير صحيحة!</div>
+        </div>
+    </div>
+
+    <div class="main-content" id="mainApp">
+        <div class="header-container">
+            <div class="stats-dashboard">
+                <div class="stat-item"><span class="stat-label"><i class="fas fa-users"></i> إجمالي الأكونتات</span><span class="stat-value" id="stat-total-acc">0</span></div>
+                <div class="stat-item"><span class="stat-label"><i class="fas fa-coins"></i> إجمالي الثروة</span><span class="stat-value" id="stat-total-wealth">0</span></div>
+                <div class="stat-item"><span class="stat-label"><i class="fas fa-trophy"></i> أغنى باند</span><span class="stat-value" id="stat-rich-band" style="font-size: 1em;">-</span></div>
+            </div>
+
+            <div class="main-controls">
+                <div class="right-controls">
+                    <button class="btn btn-primary" onclick="toggleEditor()"><i class="fas fa-edit"></i> تعديل</button>
+                    <button class="btn btn-success" onclick="copyAllCombos()"><i class="fas fa-copy"></i> نسخ الكل</button>
+                    <button class="btn" onclick="toggleView()" id="viewBtn"><i class="fas fa-list"></i> List View</button>
+                </div>
+                
+                <input type="text" id="searchInput" class="search-box" placeholder="بحث سريع..." onkeyup="renderAccounts()">
+                
+                <div class="left-controls">
+                    <div id="connectionStatus" class="status-badge status-offline">🔴 Offline</div>
+                    <button class="btn" onclick="toggleZeroBalance()" id="filterBtn"><i class="fas fa-eye-slash"></i> إخفاء 0</button>
+                    <button class="btn btn-dark" onclick="downloadFullBackup()" title="حفظ البرنامج كامل"><i class="fas fa-save"></i></button>
+                    <button class="btn btn-icon-only" onclick="toggleDarkMode()"><i class="fas fa-moon"></i></button>
+                    <button class="btn btn-icon-only" onclick="lockScreen()" style="color:#ef4444" title="قفل الشاشة"><i class="fas fa-lock"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <div class="overlay" id="overlay" onclick="toggleEditor()"></div>
+        <div id="editorSection">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h3 style="margin:0; color:var(--text);">📝 إدارة البيانات (Live Sync)</h3>
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn" onclick="isolateDuplicates()" style="background:#f59e0b; color:white; border:none;">⚠️ عزل المتكرر</button>
+                    <button class="btn" onclick="pasteFromClipboard()">📋 لصق</button>
+                </div>
+            </div>
+            <textarea id="rawDataInput" placeholder="User : Pass"></textarea>
+            <br><br>
+            <button class="btn btn-primary" onclick="manualSave()" style="width: 100%; justify-content: center;">حفظ وإرسال للجميع ☁️</button>
+        </div>
+
+        <div id="app" class="bands-container"></div>
+        <div id="toast"><span id="toastMsg">تم</span><button class="undo-btn" id="undoBtn" onclick="undoAction()">تراجع ↩️</button></div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        // --- مفاتيح الربط الخاصة بيك ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyBCDyJtEVXt9-UXyuT7mQBmElCNer2neNE",
+            authDomain: "elbdrawy.firebaseapp.com",
+            projectId: "elbdrawy",
+            storageBucket: "elbdrawy.firebasestorage.app",
+            messagingSenderId: "599472644586",
+            appId: "1:599472644586:web:b13c2430770691c8ea1293",
+            measurementId: "G-0E5QET6D7D"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        
+        window.saveToFirebase = function(data) {
+            document.getElementById('loadingBar').style.width = '50%';
+            set(ref(db, 'shared_data'), data)
+                .then(() => {
+                    document.getElementById('loadingBar').style.width = '100%';
+                    setTimeout(() => document.getElementById('loadingBar').style.width = '0%', 500);
+                    showToast("تم الحفظ والمزامنة ☁️");
+                })
+                .catch((error) => {
+                    alert("خطأ في الحفظ! تأكد من النت: " + error);
+                });
+        };
+
+        const connectedRef = ref(db, ".info/connected");
+        onValue(connectedRef, (snap) => {
+            const statusEl = document.getElementById("connectionStatus");
+            if (snap.val() === true) {
+                statusEl.innerHTML = "🟢 Online";
+                statusEl.className = "status-badge status-online";
+            } else {
+                statusEl.innerHTML = "🔴 Offline";
+                statusEl.className = "status-badge status-offline";
+            }
+        });
+
+        const dataRef = ref(db, 'shared_data');
+        onValue(dataRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                document.getElementById('rawDataInput').value = data;
+                window.parseTextToData(data);
+            } else {
+                // First time setup
+                window.saveToFirebase("# Example\nUser:Pass");
+            }
+        });
+
+    </script>
+
+    <script>
+        // Security
+        const APP_PASSWORD = "ELBADRAWY";
+        function checkLogin() {
+            const input = document.getElementById('passInput');
+            if (input.value === APP_PASSWORD) {
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('mainApp').style.display = 'block';
+                if(localStorage.getItem('theme') === 'dark') document.body.classList.add('dark-mode');
+            } else { document.getElementById('loginError').style.display = 'block'; input.value = ''; input.focus(); }
+        }
+        document.getElementById('passInput').addEventListener('keypress', function(e){ if(e.key === 'Enter') checkLogin(); });
+        function lockScreen() { document.getElementById('mainApp').style.display = 'none'; document.getElementById('loginScreen').style.display = 'flex'; document.getElementById('passInput').value = ''; }
+
+        // Logic
+        let database = [];
+        let hideZeroBalance = false;
+        let isListView = false;
+        let undoStack = null;
+        let undoTimeout = null;
+
+        window.parseTextToData = function(text) {
+            database = [];
+            const lines = text.split('\n');
+            let currentBand = null;
+            lines.forEach((line) => {
+                let trimmedLine = line.trim();
+                if (!trimmedLine) return;
+                if (trimmedLine.startsWith('#')) {
+                    let bandName = trimmedLine.substring(1).trim();
+                    currentBand = { bandName: bandName, accounts: [], id: 'band_' + Date.now() + Math.random() };
+                    database.push(currentBand);
+                } else if (trimmedLine.includes(':')) {
+                    let parts = trimmedLine.split(':');
+                    let acc = {};
+                    if (parts.length === 2) { 
+                        acc = { id: 'acc_' + Math.random(), name: parts[0].trim(), user: parts[0].trim(), pass: parts[1].trim(), count: 0 };
+                    } else if (parts.length >= 3) {
+                        acc = { id: 'acc_' + Math.random(), name: parts[0].trim(), user: parts[1].trim(), pass: parts[2].trim(), count: parseInt(parts[3]) || 0 };
+                    }
+                    if (acc.id) {
+                        if (!currentBand) { currentBand = { bandName: "ELBDRAWY", accounts: [], id: 'def_band' }; database.push(currentBand); }
+                        currentBand.accounts.push(acc);
+                    }
+                }
+            });
+            renderAccounts();
+        }
+
+        function updateStats() {
+            let totalAcc = 0, totalWealth = 0, richestBandName = "-", maxWealth = -1;
+            database.forEach(band => {
+                let bandWealth = 0;
+                band.accounts.forEach(acc => { totalAcc++; totalWealth += acc.count; bandWealth += acc.count; });
+                if(bandWealth > maxWealth && band.accounts.length > 0) { maxWealth = bandWealth; richestBandName = band.bandName; }
+            });
+            document.getElementById('stat-total-acc').innerText = totalAcc;
+            document.getElementById('stat-total-wealth').innerText = totalWealth.toLocaleString();
+            document.getElementById('stat-rich-band').innerText = richestBandName;
+        }
+
+        function renderAccounts() {
+            updateStats();
+            const searchText = document.getElementById('searchInput').value.toLowerCase();
+            const container = document.getElementById('app');
+            container.innerHTML = '';
+            if(isListView) container.classList.add('list-view'); else container.classList.remove('list-view');
+
+            database.forEach(band => {
+                const filteredAccounts = band.accounts.filter(acc => {
+                    const matchesSearch = acc.name.toLowerCase().includes(searchText) || acc.user.toLowerCase().includes(searchText) || band.bandName.toLowerCase().includes(searchText);
+                    const passesZeroCheck = !hideZeroBalance || acc.count > 0;
+                    return matchesSearch && passesZeroCheck;
+                });
+                if (filteredAccounts.length > 0 || (band.accounts.length > 0 && searchText === '' && !hideZeroBalance)) {
+                    const totalBalance = filteredAccounts.reduce((sum, acc) => sum + acc.count, 0);
+                    let accountsHTML = filteredAccounts.map(acc => `
+                        <div class="account-card">
+                            <div class="acc-top">
+                                <div class="acc-name-group">
+                                    <button class="acc-name-btn" onclick="copyToClipboard('${acc.name}')">${acc.name}</button>
+                                    <button class="combo-btn" onclick="copyCombo('${acc.user}', '${acc.pass}')">Combo</button>
+                                </div>
+                                ${!isListView ? `<button class="delete-btn" onclick="deleteAccount('${acc.id}', '${band.id}')"><i class="fas fa-trash-alt"></i></button>` : ''}
+                            </div>
+                            <div class="data-row"><span class="data-text" title="${acc.user}">${acc.user}</span></div>
+                            ${!isListView ? `<div class="data-row"><span class="data-text">•••••••</span><button class="btn-icon-only" style="background:none; border:none; cursor:pointer; color:var(--primary)" onclick="copyToClipboard('${acc.pass}')"><i class="fas fa-key"></i></button></div>` : ''}
+                            <div class="counter-row">
+                                ${!isListView ? '<span style="font-size:0.8em; color:var(--success)">الرصيد:</span>' : ''}
+                                <button class="counter-btn c-minus" onclick="updateCount('${acc.id}', -1)">-</button>
+                                <input type="number" class="counter-input" value="${acc.count}" onchange="setManualCount('${acc.id}', this.value)">
+                                <button class="counter-btn c-plus" onclick="updateCount('${acc.id}', 1)">+</button>
+                            </div>
+                            ${isListView ? `<button class="delete-btn" onclick="deleteAccount('${acc.id}', '${band.id}')"><i class="fas fa-times"></i></button>` : ''}
+                        </div>
+                    `).join('');
+                    const isDup = band.bandName === "Duplicate_Found";
+                    let bandHTML = `
+                        <div class="band-column" id="${band.id}" data-name="${band.bandName}">
+                            <div class="band-header" onclick="toggleOneBand('${band.id}')">
+                                <div style="display:flex; align-items:center;"><span>${band.bandName}</span><small style="margin-right:8px; opacity:0.7">(${filteredAccounts.length})</small></div>
+                                <div style="display:flex; align-items:center;">
+                                    <button class="band-copy-btn" onclick="event.stopPropagation(); copyBandCombos('${band.id}')"><i class="fas fa-copy"></i></button>
+                                    <span class="total-badge">${totalBalance}</span>
+                                    <i class="fas fa-chevron-down toggle-icon" style="margin-right:5px"></i>
+                                </div>
+                            </div>
+                            <div class="band-body">${accountsHTML}</div>
+                        </div>
+                    `;
+                    container.innerHTML += bandHTML;
+                }
+            });
+        }
+
+        function regenerateTextFromData() { 
+            let txt = ""; 
+            database.forEach(b => { txt += `# ${b.bandName}\n`; b.accounts.forEach(a => txt += `${a.name} : ${a.user} : ${a.pass} : ${a.count}\n`); txt += "\n"; }); 
+            if(window.saveToFirebase) window.saveToFirebase(txt);
+        }
+
+        function deleteAccount(accId, bandId) {
+            let bandIndex = database.findIndex(b => b.id === bandId); if (bandIndex === -1) return;
+            let accIndex = database[bandIndex].accounts.findIndex(a => a.id === accId); if (accIndex === -1) return;
+            undoStack = { account: database[bandIndex].accounts[accIndex], bandId: bandId, index: accIndex };
+            database[bandIndex].accounts.splice(accIndex, 1);
+            regenerateTextFromData(); 
+            showToast("تم الحذف 🗑️", true);
+        }
+        function undoAction() {
+            if (!undoStack) return;
+            let band = database.find(b => b.id === undoStack.bandId);
+            if (band) { band.accounts.splice(undoStack.index, 0, undoStack.account); regenerateTextFromData(); showToast("تم التراجع ✅", false); undoStack = null; }
+        }
+
+        function updateCount(accId, change) { for (let band of database) { let acc = band.accounts.find(a => a.id === accId); if (acc) { acc.count += change; if(acc.count < 0) acc.count = 0; regenerateTextFromData(); return; } } }
+        function setManualCount(accId, val) { for (let band of database) { let acc = band.accounts.find(a => a.id === accId); if (acc) { acc.count = parseInt(val) || 0; if(acc.count < 0) acc.count = 0; regenerateTextFromData(); return; } } }
+        
+        function isolateDuplicates() {
+            if(!confirm("نقل المتكرر لقسم 'Duplicate_Found'؟")) return;
+            const seen = new Set(); const dups = []; let newDB = [];
+            database.forEach(band => {
+                if(band.bandName === "Duplicate_Found") return;
+                const clean = [];
+                band.accounts.forEach(acc => { if(seen.has(acc.user)) dups.push(acc); else { seen.add(acc.user); clean.push(acc); } });
+                band.accounts = clean; if(band.accounts.length || band.bandName !== "Duplicate_Found") newDB.push(band);
+            });
+            if(dups.length) { newDB.push({ bandName: "Duplicate_Found", id: 'dup_'+Date.now(), accounts: dups }); database = newDB; regenerateTextFromData(); showToast(`تم عزل ${dups.length} مكرر`); } else alert("لا يوجد تكرار");
+        }
+
+        function manualSave() { 
+            const txt = document.getElementById('rawDataInput').value; 
+            if(window.saveToFirebase) window.saveToFirebase(txt);
+            toggleEditor(); 
+        }
+
+        function toggleView() { isListView = !isListView; document.getElementById('viewBtn').innerHTML = isListView ? '<i class="fas fa-th-large"></i> Grid View' : '<i class="fas fa-list"></i> List View'; renderAccounts(); }
+        function toggleDarkMode() { document.body.classList.toggle('dark-mode'); localStorage.setItem('theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light'); }
+        function toggleZeroBalance() { hideZeroBalance = !hideZeroBalance; document.getElementById('filterBtn').style.background = hideZeroBalance ? "var(--border)" : ""; renderAccounts(); }
+        function toggleEditor() { const el = document.getElementById('editorSection'); const ov = document.getElementById('overlay'); const show = el.style.display === 'block'; el.style.display = show ? 'none' : 'block'; ov.style.display = show ? 'none' : 'block'; }
+        function copyBandCombos(bandId) { const b = database.find(x => x.id === bandId); if(!b || !b.accounts.length) return; let t = ""; b.accounts.forEach(a => t += `${a.user}:${a.pass}\n`); navigator.clipboard.writeText(t).then(() => showToast(`تم نسخ ${b.bandName}`)); }
+        function copyAllCombos() { let t = ""; database.forEach(b => b.accounts.forEach(a => t += `${a.user}:${a.pass}\n`)); if(t) navigator.clipboard.writeText(t).then(() => showToast("تم نسخ الكل")); else alert("فارغ"); }
+        function downloadFullBackup() {
+            const currentData = document.getElementById('rawDataInput').value;
+            const safeData = currentData.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$');
+            let htmlContent = document.documentElement.outerHTML;
+            htmlContent = htmlContent.replace(/<script type="module">[\s\S]*?<\/script>/, '');
+            const offlineScript = `<script>localStorage.setItem('myAccountsRaw', \`${safeData}\`); window.location.reload();<\/script>`;
+            const blob = new Blob([htmlContent], {type: "text/html;charset=utf-8"});
+            const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `ELBDRAWY_Backup_${new Date().toISOString().slice(0,10)}.html`; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        }
+        async function pasteFromClipboard() { try { document.getElementById('rawDataInput').value += "\n" + await navigator.clipboard.readText(); } catch { alert("برجاء السماح باللصق"); } }
+        function copyToClipboard(t) { navigator.clipboard.writeText(t).then(() => showToast("تم النسخ")); }
+        function copyCombo(u, p) { navigator.clipboard.writeText(`${u}:${p}`).then(() => showToast("تم نسخ الكومبو")); }
+        function showToast(msg, showUndo = false) { const t = document.getElementById("toast"); document.getElementById("toastMsg").innerText = msg; document.getElementById("undoBtn").style.display = showUndo ? "block" : "none"; t.className = "show"; if(undoTimeout) clearTimeout(undoTimeout); undoTimeout = setTimeout(() => { t.className = t.className.replace("show", ""); if(showUndo) undoStack = null; }, 3000); }
+        function toggleOneBand(id) { if(['INPUT','BUTTON','I'].includes(event.target.tagName)) return; document.getElementById(id).classList.toggle('collapsed'); }
+        function toggleAllBands(action) { document.querySelectorAll('.band-column').forEach(b => { if(action==='collapse') b.classList.add('collapsed'); else b.classList.remove('collapsed'); }); }
+    </script>
+</body>
+</html>
