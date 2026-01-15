@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ELBDRAWY Enterprise (V32)</title>
+    <title>ELBDRAWY System (V37)</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -11,12 +11,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
     
     <style>
-        /* --- THEME --- */
         :root {
-            --glass-bg: rgba(255, 255, 255, 0.05);
-            --glass-border: rgba(255, 255, 255, 0.1);
+            --glass-bg: rgba(255, 255, 255, 0.05); --glass-border: rgba(255, 255, 255, 0.1);
             --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-            --primary: #4cc9f0; --success: #06d6a0; --danger: #ef476f; --warning: #ffd166; --info: #4895ef;
+            --primary: #4cc9f0; --success: #06d6a0; --danger: #ef476f; --warning: #ffd166; --xp: #9d4edd;
         }
         body {
             font-family: 'Cairo', sans-serif; margin: 0; padding: 0;
@@ -26,16 +24,26 @@
         }
         @keyframes gradientBG { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
 
-        /* --- UI COMPONENTS --- */
         .glass-panel {
             background: var(--glass-bg); backdrop-filter: blur(8px);
             border: 1px solid var(--glass-border); border-radius: 16px;
             box-shadow: var(--glass-shadow); padding: 15px; margin-bottom: 20px;
         }
 
+        /* Maintenance Screen */
+        #maintenanceScreen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 10000; display: none;
+            flex-direction: column; align-items: center; justify-content: center;
+            text-align: center;
+        }
+        .hazard-striped {
+            background: repeating-linear-gradient(45deg, #000, #000 10px, #ffd166 10px, #ffd166 20px);
+            height: 20px; width: 100%; position: absolute; top: 0;
+        }
+
+        /* Layout */
         .main-content { padding: 20px; max-width: 1600px; margin: 0 auto; display: none; }
-        
-        /* Dashboard Grid */
         .dashboard-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
         @media (max-width: 900px) { .dashboard-grid { grid-template-columns: 1fr; } }
 
@@ -43,11 +51,12 @@
         .stat-value { font-size: 1.8em; font-weight: 900; color: var(--primary); display: block;}
         .stat-label { font-size: 0.8em; opacity: 0.7; }
 
-        /* Leaderboard */
+        /* Gamification Table */
         .leaderboard-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        .leaderboard-table th { text-align: right; color: var(--warning); padding: 5px; border-bottom: 1px solid rgba(255,255,255,0.1); }
         .leaderboard-table td { padding: 8px 5px; border-bottom: 1px solid rgba(255,255,255,0.05); }
-        .rank-1 { color: #ffd700; text-shadow: 0 0 10px #ffd700; } 
+        .xp-bar { height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; margin-top: 5px; overflow: hidden; }
+        .xp-fill { height: 100%; background: var(--xp); width: 0%; transition: 1s; }
+        .rank-badge { font-size: 0.8em; padding: 2px 6px; border-radius: 4px; margin-left: 5px; background: rgba(255,255,255,0.1); }
 
         .controls-bar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
         .action-btn {
@@ -59,6 +68,7 @@
         .btn-primary { background: var(--primary); color: #000; border: none; }
         .btn-success { background: var(--success); color: #000; border: none; }
         .btn-danger { color: var(--danger); border-color: var(--danger); }
+        .btn-sell { background: linear-gradient(45deg, #f72585, #7209b7); border: none; color: white; } 
         
         .search-box {
             background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border);
@@ -67,7 +77,6 @@
         }
         .search-box:focus { border-color: var(--primary); }
 
-        /* Bands & Cards */
         .bands-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; align-items: start; }
         .band-column {
             background: rgba(0,0,0,0.2); border-radius: 12px; overflow: hidden;
@@ -79,22 +88,28 @@
             padding: 10px 15px; font-weight: bold;
             display: flex; justify-content: space-between; align-items: center;
         }
-        
+        .band-price-input {
+            background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border);
+            color: var(--success); width: 60px; padding: 2px 5px; border-radius: 4px;
+            text-align: center; font-weight: bold; margin-right: 5px;
+        }
+        .quick-add-btn {
+            background: var(--success); color: #000; width: 28px; height: 28px;
+            border-radius: 50%; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            font-size: 14px; margin-right: 5px; transition: 0.2s;
+        }
+        .quick-add-btn:hover { transform: scale(1.1); box-shadow: 0 0 10px var(--success); }
+
         .account-card {
             background: rgba(255,255,255,0.03); margin: 10px; padding: 12px;
             border-radius: 10px; border: 1px solid transparent; position: relative; transition: 0.3s;
-            border-right: 3px solid transparent; /* For Tags */
+            border-right: 3px solid transparent;
         }
         .account-card:hover { background: rgba(255,255,255,0.07); transform: translateY(-3px); }
-        
-        /* TAGS COLORS */
         .tag-red { border-right-color: var(--danger) !important; background: linear-gradient(90deg, rgba(239, 71, 111, 0.1), transparent); }
         .tag-green { border-right-color: var(--success) !important; background: linear-gradient(90deg, rgba(6, 214, 160, 0.1), transparent); }
         .tag-yellow { border-right-color: var(--warning) !important; background: linear-gradient(90deg, rgba(255, 209, 102, 0.1), transparent); }
-
         .acc-note { font-size: 0.8em; color: var(--warning); margin-top: 5px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
-        .acc-price { position: absolute; top: 12px; left: 12px; font-size: 0.9em; color: var(--success); font-weight: bold; }
-
         .acc-name { color: var(--primary); font-weight: bold; font-size: 1.1em; cursor: pointer; }
         .data-text { font-family: monospace; color: #ccc; font-size: 0.9em; margin: 5px 0; }
         
@@ -103,11 +118,11 @@
         .btn-plus { background: var(--success); } .btn-minus { background: var(--danger); }
         .count-val { font-size: 1.2em; font-weight: bold; color: white; width: 40px; text-align: center; }
         
-        .card-actions { display: flex; justify-content: space-between; margin-top: 10px; }
+        /* CARD ACTIONS - FIXED */
+        .card-actions { display: flex; justify-content: space-between; margin-top: 10px; gap: 5px; }
         .icon-btn { background: none; border: none; color: #777; cursor: pointer; transition: 0.2s; }
         .icon-btn:hover { color: white; transform: scale(1.2); }
 
-        /* Login & Modals */
         #loginScreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0f0c29; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .login-glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(16px); padding: 40px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); text-align: center; width: 320px; }
         .login-input, .modal-input, .modal-select { width: 100%; padding: 12px; margin: 10px 0; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); border-radius: 8px; color: white; text-align: center; font-family: 'Cairo'; outline: none; box-sizing: border-box;}
@@ -128,12 +143,24 @@
         .news-ticker { background: rgba(0,0,0,0.5); color: var(--warning); padding: 8px 0; font-weight: bold; white-space: nowrap; overflow: hidden; }
         .ticker-content { display: inline-block; animation: ticker 20s linear infinite; padding-left: 100%; }
         @keyframes ticker { 0% { transform: translateX(0); } 100% { transform: translateX(100%); } }
+        
+        .bulk-area { display: none; } .bulk-mode .single-area { display: none; } .bulk-mode .bulk-area { display: block; }
+        
+        /* Prediction Alert */
+        #smartAlert { background: rgba(239, 71, 111, 0.2); border: 1px solid var(--danger); padding: 10px; border-radius: 8px; margin-bottom: 15px; display: none; text-align: center; color: #ffadad; }
     </style>
 </head>
 <body>
     
-    <div class="version-tag">V32 - ENTERPRISE</div>
-    <div class="news-ticker"><div class="ticker-content" id="newsTicker">>>> V32: تم إضافة سلة المحذوفات + نظام الملاحظات + تسعير المخزون + لوحة المتصدرين 🏆</div></div>
+    <div id="maintenanceScreen">
+        <div class="hazard-striped"></div>
+        <i class="fas fa-tools" style="font-size: 5em; color: var(--warning); margin-bottom: 20px;"></i>
+        <h1 style="color: white;">النظام تحت الصيانة الإجبارية</h1>
+        <p style="color: #aaa;">تم إغلاق النظام لأسباب أمنية. يرجى مراجعة الإدارة.</p>
+    </div>
+
+    <div class="version-tag">V37 - COMPLETE</div>
+    <div class="news-ticker"><div class="ticker-content" id="newsTicker">>>> V37: عودة زرار الكومبو + كل مميزات V36 📋</div></div>
 
     <div id="loginScreen">
         <div class="login-glass">
@@ -147,18 +174,20 @@
 
     <div class="main-content" id="mainApp">
         <div class="header-container">
+            <div id="smartAlert"><i class="fas fa-brain"></i> <b>تحليل ذكي:</b> <span id="smartMsg"></span></div>
+
             <div class="dashboard-grid">
                 <div class="glass-panel stats-dashboard">
                     <div class="stat-item"><span class="stat-value" id="stat-acc">0</span><span class="stat-label">أكونتات</span></div>
                     <div class="stat-item"><span class="stat-value" id="stat-wealth" style="color:var(--warning)">0</span><span class="stat-label">عدد كلي</span></div>
-                    <div class="stat-item"><span class="stat-value" id="stat-value" style="color:var(--success)">0$</span><span class="stat-label">قيمة المخزون 💲</span></div>
+                    <div class="stat-item"><span class="stat-value" id="stat-value" style="color:var(--success)">0$</span><span class="stat-label">قيمة المخزون</span></div>
                     <div class="stat-item"><span class="stat-value" id="currentUserDisplay" style="color:var(--info)">-</span><span class="stat-label">المستخدم</span></div>
                 </div>
                 
-                <div class="glass-panel" style="overflow-y: auto; max-height: 150px;">
-                    <h4 style="margin:0 0 10px 0; color:var(--warning); text-align:center"><i class="fas fa-trophy"></i> لوحة المتصدرين (Live)</h4>
+                <div class="glass-panel" style="overflow-y: auto; max-height: 200px;">
+                    <h4 style="margin:0 0 10px 0; color:var(--xp); text-align:center"><i class="fas fa-gamepad"></i> أبطال الفريق (XP)</h4>
                     <table class="leaderboard-table" id="leaderboardTable">
-                        <tr><td>جاري التحميل...</td></tr>
+                        <tr><td>جاري حساب المستويات...</td></tr>
                     </table>
                 </div>
             </div>
@@ -170,8 +199,11 @@
                     <button class="action-btn btn-primary" onclick="openEditor()"><i class="fas fa-terminal"></i> المحرر</button>
                     <button class="action-btn" onclick="copyAllCombos()"><i class="fas fa-copy"></i> نسخ الكل</button>
                 </div>
-                <input type="text" id="searchInput" class="search-box" placeholder="🔎 بحث (Alt+F)..." onkeyup="renderAccounts()">
-                <button class="action-btn" style="color:var(--danger); border-color:var(--danger)" onclick="logout()">خروج</button>
+                <input type="text" id="searchInput" class="search-box" placeholder="🔎 بحث (Alt+F)..." onkeyup="render()">
+                <div style="display:flex; gap:5px">
+                    <button class="action-btn" style="color:var(--danger); border-color:var(--danger)" onclick="killSwitch()"><i class="fas fa-skull"></i></button>
+                    <button class="action-btn" style="color:#777" onclick="logout()">خروج</button>
+                </div>
             </div>
         </div>
         <div id="app" class="bands-container"></div>
@@ -180,24 +212,32 @@
     <div class="overlay" id="overlay" onclick="closeModals()"></div>
     
     <div id="addModal" class="modal">
-        <h3 style="color: white; margin-top:0;">⚡ إضافة سريعة</h3>
+        <h3 style="color: white; margin-top:0;">⚡ إضافة جديدة (+10 XP)</h3>
+        <div style="margin-bottom:10px; text-align:left;">
+            <label style="cursor:pointer; color:var(--info)">
+                <input type="checkbox" id="bulkModeToggle" onchange="toggleBulkMode()"> تفعيل الإضافة الجماعية 📚
+            </label>
+        </div>
+        <label style="color:#aaa; font-size:0.9em">اختر الباند</label>
         <select id="newAccBand" class="modal-select"></select>
-        <input type="text" id="newAccName" class="modal-input" placeholder="اسم الأكونت">
-        <input type="text" id="newAccUser" class="modal-input" placeholder="اليوزر (أو الصق user:pass)" oninput="smartPaste(this)">
-        <input type="text" id="newAccPass" class="modal-input" placeholder="الباسورد">
-        <input type="number" id="newAccCount" class="modal-input" placeholder="الرصيد" value="0">
-        <input type="number" id="newAccPrice" class="modal-input" placeholder="السعر (اختياري) 💲">
-        <button class="glow-btn" onclick="confirmAddAccount()">إضافة ✅</button>
+        <div class="single-area">
+            <input type="text" id="newAccName" class="modal-input" placeholder="اسم الأكونت">
+            <input type="text" id="newAccUser" class="modal-input" placeholder="اليوزر (أو الصق user:pass)" oninput="smartPaste(this)">
+            <input type="text" id="newAccPass" class="modal-input" placeholder="الباسورد">
+            <input type="number" id="newAccCount" class="modal-input" placeholder="الرصيد" value="0">
+        </div>
+        <div class="bulk-area">
+            <textarea id="bulkInput" placeholder="User:Pass" style="height:150px; color:white"></textarea>
+        </div>
+        <button class="glow-btn" onclick="confirmAddAccount()">تنفيذ ✅</button>
     </div>
 
     <div id="detailsModal" class="modal">
-        <h3 style="color: white; margin-top:0;">🏷️ تعديل التفاصيل</h3>
+        <h3 style="color: white; margin-top:0;">🏷️ تفاصيل</h3>
         <input type="hidden" id="editAccId">
-        <label>السعر ($)</label>
-        <input type="number" id="editPrice" class="modal-input" placeholder="0">
         <label>ملاحظة</label>
         <input type="text" id="editNote" class="modal-input" placeholder="اكتب ملحوظة...">
-        <label>الحالة (Tag)</label>
+        <label>الحالة</label>
         <div style="text-align:center; margin: 10px 0;">
             <span class="tag-option" style="background:var(--danger)" onclick="selectTag('red')"></span>
             <span class="tag-option" style="background:var(--success)" onclick="selectTag('green')"></span>
@@ -205,13 +245,13 @@
             <span class="tag-option" style="border:1px solid #555" onclick="selectTag('')">❌</span>
         </div>
         <input type="hidden" id="editTag">
-        <button class="glow-btn" onclick="saveDetails()">حفظ التعديلات 💾</button>
+        <button class="glow-btn" onclick="saveDetails()">حفظ 💾</button>
     </div>
 
     <div id="trashModal" class="modal">
         <h3 style="color: var(--danger); margin-top:0;">♻️ سلة المحذوفات</h3>
         <div id="trashList" style="max-height: 300px; overflow-y: auto; margin-bottom:10px;"></div>
-        <button class="action-btn btn-danger" style="width:100%; justify-content:center" onclick="emptyTrash()">إفراغ السلة نهائياً 🔥</button>
+        <button class="action-btn btn-danger" style="width:100%; justify-content:center" onclick="emptyTrash()">إفراغ السلة 🔥</button>
     </div>
 
     <div id="editorModal" class="modal">
@@ -223,34 +263,54 @@
     <div id="toast"><i class="fas fa-check-circle"></i> <span id="toastMsg">تم!</span></div>
 
     <script>
-        // --- SOUNDS ---
         const Sounds = {
             coin: new Audio('https://www.myinstants.com/media/sounds/super-mario-coin.mp3'),
             click: new Audio('https://www.myinstants.com/media/sounds/click_x.mp3'),
             trash: new Audio('https://www.myinstants.com/media/sounds/discord-leave.mp3'),
             magic: new Audio('https://www.myinstants.com/media/sounds/fairy-glitter-86721.mp3'),
-            login: new Audio('https://www.myinstants.com/media/sounds/discord-join.mp3')
+            login: new Audio('https://www.myinstants.com/media/sounds/discord-join.mp3'),
+            sale: new Audio('https://www.myinstants.com/media/sounds/cha-ching-register.mp3') 
         };
         Object.values(Sounds).forEach(s => s.volume = 0.3);
 
-        // --- CONFIG ---
         const DISCORD_WEBHOOK = "https://discord.com/api/webhooks/1461396528089403582/cAmKpW39f8Y_qHmF8PbwHqH4FAlxuQy0s9HRNFA9LOqs8Kn-cfaWriZYNu_BSqL8PXvr";
         const firebaseConfig = { apiKey: "AIzaSyBCDyJtEVXt9-UXyuT7mQBmElCNer2neNE", authDomain: "elbdrawy.firebaseapp.com", projectId: "elbdrawy", storageBucket: "elbdrawy.firebasestorage.app", messagingSenderId: "599472644586", appId: "1:599472644586:web:b13c2430770691c8ea1293", measurementId: "G-0E5QET6D7D" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // --- AUTH ---
         const APP_PASS = "ELBADRAWY";
         const ALLOWED = ["Adham Zng", "Belal Zng", "Amar Zng", "Adham Normal", "Belal Kersha"];
         let currentUser = localStorage.getItem('currentUser');
-        
+        let database = [];
+        let trashBin = [];
+
+        db.ref('maintenance_mode').on('value', snap => {
+            const isLocked = snap.val();
+            if(isLocked === true) {
+                document.getElementById('mainApp').style.display = 'none';
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('maintenanceScreen').style.display = 'flex';
+            }
+        });
+
+        function killSwitch() {
+            const pass = prompt("⚠️ تدمير ذاتي: أدخل كود الطوارئ:");
+            if(pass === "ELBADRAWY") {
+                const backupData = document.getElementById('rawDataInput').value;
+                sendDiscord(`🚨 **KILL SWITCH ACTIVATED** by ${currentUser}\nBackup Data:\n\`\`\`${backupData.substring(0, 1900)}\`\`\``);
+                db.ref('maintenance_mode').set(true);
+                alert("تم تفعيل وضع الطوارئ. النظام مغلق الآن.");
+                location.reload();
+            }
+        }
+
         function checkLogin() {
             const u = document.getElementById('usernameInput').value.trim();
             const p = document.getElementById('passInput').value;
             const validUser = ALLOWED.find(user => user.toLowerCase() === u.toLowerCase());
             if (validUser && p === APP_PASS) {
                 currentUser = validUser; localStorage.setItem('currentUser', currentUser);
-                Sounds.login.play(); initApp(); sendDiscord(`🟢 **${currentUser}** logged in (V32)`);
+                Sounds.login.play(); initApp(); sendDiscord(`🟢 **${currentUser}** logged in (V37)`);
             } else {
                 document.getElementById('loginError').style.display = 'block'; Sounds.trash.play();
             }
@@ -262,11 +322,8 @@
             document.getElementById('mainApp').style.display = 'block';
             document.getElementById('currentUserDisplay').innerText = currentUser;
             loadLeaderboard();
+            runSmartPrediction();
         }
-
-        // --- LOGIC ---
-        let database = [];
-        let trashBin = [];
 
         db.ref('shared_data').on('value', snap => {
             const val = snap.val() || "";
@@ -286,22 +343,24 @@
                 if(!line || line.startsWith('>>>')) return;
                 
                 if(line.startsWith('### TRASH ###')) {
-                    currentBand = { name: "TRASH", accs: [] }; // Special handling
+                    currentBand = { name: "TRASH", accs: [], price: 0 };
                 } else if(line.startsWith('#')) {
-                    currentBand = { name: line.substring(1).trim(), accs: [], id: Math.random().toString(36) };
+                    let bandData = line.substring(1).trim().split(':');
+                    let bName = bandData[0].trim();
+                    let bPrice = bandData.length > 1 ? parseFloat(bandData[1]) || 0 : 0;
+                    currentBand = { name: bName, accs: [], id: Math.random().toString(36), price: bPrice };
                     if(currentBand.name !== "TRASH") database.push(currentBand);
                 } else if(line.includes(':')) {
                     const p = line.split(':');
-                    // Format: Name:User:Pass:Count:Price:Note:Tag
                     const acc = {
                         id: 'acc_' + Math.random().toString(36).substr(2, 9),
                         name: p[0].trim(),
                         user: (p[1] || p[0]).trim(),
                         pass: (p[2] || "").trim(),
                         count: parseInt(p[3] || 0),
-                        price: parseFloat(p[4] || 0),
-                        note: (p[5] || "").trim(),
-                        tag: (p[6] || "").trim()
+                        note: (p[4] || "").trim(),
+                        tag: (p[5] || "").trim(),
+                        originalBand: (p[6] || "").trim()
                     };
                     if(currentBand) {
                         if(currentBand.name === "TRASH") trashBin.push(acc);
@@ -325,21 +384,18 @@
                 let bandWealth = 0;
                 let html = visible.map(acc => {
                     totalAcc++; totalWealth += acc.count; bandWealth += acc.count;
-                    totalValue += (acc.price * acc.count); // Calculate Inventory Value
-
+                    
                     let cardClass = "account-card";
                     if(acc.count === 0) cardClass += " out-of-stock";
                     else if(acc.count < 3) cardClass += " low-stock";
                     if(acc.tag) cardClass += ` tag-${acc.tag}`;
 
                     let noteHtml = acc.note ? `<span class="acc-note"><i class="fas fa-sticky-note"></i> ${acc.note}</span>` : '';
-                    let priceHtml = acc.price > 0 ? `<span class="acc-price">${acc.price}$</span>` : '';
 
                     return `
                     <div class="${cardClass}" id="${acc.id}">
-                        ${priceHtml}
                         <div class="acc-top" style="justify-content: flex-end;">
-                            <button class="icon-btn" onclick="openDetails('${acc.id}', '${band.name}')" title="تعديل التفاصيل"><i class="fas fa-pen"></i></button>
+                            <button class="icon-btn" onclick="openDetails('${acc.id}', '${band.name}')"><i class="fas fa-pen"></i></button>
                         </div>
                         <div style="text-align:center; margin-top:-20px">
                             <span class="acc-name" onclick="copy('${acc.name}', 'magic')">${acc.name}</span>
@@ -352,20 +408,31 @@
                             <button class="count-btn btn-plus" onclick="update('${acc.id}', 1, '${acc.name}', '${band.name}')"><i class="fas fa-plus"></i></button>
                         </div>
                         <div class="card-actions">
-                            <button class="action-btn" style="font-size:0.7em; padding:4px" onclick="copy('${acc.user}:${acc.pass}', 'magic')">Combo</button>
+                            <button class="action-btn btn-sell" style="flex:1; font-size:0.8em" onclick="sellAccount('${acc.id}', '${acc.name}', '${band.name}')">بيع 💰</button>
+                            <button class="action-btn" style="flex:1; font-size:0.8em; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2)" onclick="copy('${acc.user}:${acc.pass}', 'magic')">Combo 📋</button>
                             <button class="icon-btn" style="color:var(--danger)" onclick="moveToTrash('${acc.id}', '${acc.name}', '${band.name}')"><i class="fas fa-trash"></i></button>
                         </div>
                     </div>`;
                 }).join('');
 
+                let bandTotalValue = bandWealth * band.price;
+                totalValue += bandTotalValue;
+
                 container.innerHTML += `
                 <div class="band-column">
                     <div class="band-header">
-                        <div class="band-info" onclick="this.parentElement.parentElement.classList.toggle('collapsed')" style="flex-grow:1; cursor:pointer">
-                            <span>${band.name} <small>(${visible.length})</small> <span style="color:var(--warning)">${bandWealth}💰</span></span>
-                            <i class="fas fa-chevron-down" style="margin-right:5px"></i>
+                        <div class="band-info" onclick="this.parentElement.parentElement.classList.toggle('collapsed')" style="flex-grow:1; cursor:pointer; display:flex; align-items:center;">
+                            <span style="font-weight:900; font-size:1.1em; color:white;">${band.name}</span>
+                            <span style="background:var(--primary); color:#000; padding:2px 8px; border-radius:12px; margin-right:10px; font-weight:bold; font-size:0.9em; box-shadow:0 0 10px var(--primary);">
+                                ${visible.length}
+                            </span>
+                            <i class="fas fa-chevron-down" style="margin-right:auto; margin-left:10px; opacity:0.7;"></i>
                         </div>
-                        <button class="quick-add-btn" onclick="openAddModal('${band.name}')" title="إضافة"><i class="fas fa-plus"></i></button>
+                        <div style="display:flex; align-items:center" onclick="event.stopPropagation()">
+                            <input type="number" class="band-price-input" value="${band.price}" onchange="updateBandPrice('${band.name}', this.value)" placeholder="$">
+                            <span style="color:var(--warning); margin-left:5px; font-size:0.9em; min-width:40px">${bandTotalValue}$</span>
+                            <button class="quick-add-btn" onclick="openAddModal('${band.name}')" title="إضافة"><i class="fas fa-plus"></i></button>
+                        </div>
                     </div>
                     <div class="band-body">${html}</div>
                 </div>`;
@@ -376,252 +443,172 @@
             document.getElementById('stat-value').innerText = totalValue.toLocaleString() + '$';
         }
 
-        // --- NEW FEATURES ACTIONS ---
-        
-        // 1. Recycle Bin
-        function moveToTrash(id, name, bandName) {
+        function sellAccount(id, name, bandName) {
+            if(!confirm(`بيع الأكونت ${name}؟ سيتم نقله للأرشيف وحساب XP.`)) return;
+            
             const band = database.find(b => b.name === bandName);
             const idx = band.accs.findIndex(a => a.id === id);
             if(idx > -1) {
                 const acc = band.accs[idx];
-                trashBin.push(acc); // Add to RAM trash
-                band.accs.splice(idx, 1); // Remove from RAM band
-                regenerateText(); // Save both changes
-                Sounds.trash.play();
-                logToAll("🗑️ سلة", `نقل [${name}] إلى سلة المحذوفات`);
-            }
-        }
-
-        function openTrash() {
-            const list = document.getElementById('trashList');
-            list.innerHTML = trashBin.length === 0 ? "<div style='color:#777; text-align:center'>السلة فارغة ✅</div>" : "";
-            
-            trashBin.forEach(acc => {
-                list.innerHTML += `
-                <div style="background:rgba(255,255,255,0.05); padding:10px; margin-bottom:5px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
-                    <span>${acc.name} (${acc.count})</span>
-                    <button class="action-btn btn-success" onclick="restoreFromTrash('${acc.name}')" style="font-size:0.8em">استرجاع</button>
-                </div>`;
-            });
-            
-            document.getElementById('trashModal').style.display='block';
-            setTimeout(()=>document.getElementById('trashModal').classList.add('active'),10);
-            document.getElementById('overlay').style.display='block';
-        }
-
-        function restoreFromTrash(accName) {
-            const idx = trashBin.findIndex(a => a.name === accName);
-            if(idx > -1) {
-                const acc = trashBin[idx];
-                trashBin.splice(idx, 1);
-                // Return to first band by default or create "Restored" band
-                if(database.length > 0) database[0].accs.push(acc);
-                else database.push({name: "Restored", accs: [acc]});
-                
+                acc.originalBand = bandName;
+                acc.tag = "sold"; 
+                trashBin.push(acc);
+                band.accs.splice(idx, 1);
                 regenerateText();
-                closeModals();
-                Sounds.magic.play();
-                logToAll("♻️ استرجاع", `تم استرجاع [${accName}]`);
+                Sounds.sale.play();
+                logToAll("💰 بيع", `تم بيع [${name}] (+50 XP)`);
             }
         }
 
-        function emptyTrash() {
-            if(confirm("هل أنت متأكد؟ سيتم حذف هذه الأكونتات نهائياً!")) {
-                trashBin = [];
-                regenerateText();
-                closeModals();
-                Sounds.trash.play();
-                logToAll("🔥 تنظيف", "تم إفراغ سلة المحذوفات");
-            }
-        }
-
-        // 2. Notes & Details
-        function openDetails(id, bandName) {
-            const band = database.find(b => b.name === bandName);
-            const acc = band.accs.find(a => a.id === id);
-            
-            document.getElementById('editAccId').value = JSON.stringify({id, bandName});
-            document.getElementById('editPrice').value = acc.price || 0;
-            document.getElementById('editNote').value = acc.note || "";
-            document.getElementById('editTag').value = acc.tag || "";
-            
-            // UI Selection
-            document.querySelectorAll('.tag-option').forEach(el => el.classList.remove('selected'));
-            
-            document.getElementById('detailsModal').style.display='block';
-            setTimeout(()=>document.getElementById('detailsModal').classList.add('active'),10);
-            document.getElementById('overlay').style.display='block';
-        }
-
-        function selectTag(color) {
-            document.getElementById('editTag').value = color;
-            document.querySelectorAll('.tag-option').forEach(el => el.classList.remove('selected'));
-            event.target.classList.add('selected');
-        }
-
-        function saveDetails() {
-            const meta = JSON.parse(document.getElementById('editAccId').value);
-            const price = document.getElementById('editPrice').value;
-            const note = document.getElementById('editNote').value;
-            const tag = document.getElementById('editTag').value;
-
-            const band = database.find(b => b.name === meta.bandName);
-            const acc = band.accs.find(a => a.id === meta.id);
-            
-            acc.price = parseFloat(price) || 0;
-            acc.note = note.replace(/:/g, '-'); // Prevent format break
-            acc.tag = tag;
-
-            regenerateText();
-            closeModals();
-            Sounds.coin.play();
-        }
-
-        // 3. Leaderboard (Auto-calculated from Firebase Logs)
         function loadLeaderboard() {
-            db.ref('system_logs').limitToLast(100).on('value', snap => {
-                const stats = {};
+            db.ref('system_logs').limitToLast(200).on('value', snap => {
+                const xp = {};
                 snap.forEach(s => {
                     const log = s.val();
-                    if(!stats[log.user]) stats[log.user] = 0;
-                    stats[log.user]++; // Simple activity score
+                    if(!xp[log.user]) xp[log.user] = 0;
+                    if(log.action.includes("بيع")) xp[log.user] += 50;
+                    else if(log.action.includes("إضافة")) xp[log.user] += 10;
+                    else xp[log.user] += 2; 
                 });
 
-                const sorted = Object.entries(stats).sort((a,b) => b[1] - a[1]);
+                const sorted = Object.entries(xp).sort((a,b) => b[1] - a[1]);
                 let html = "";
                 sorted.forEach((entry, i) => {
-                    const rankClass = i === 0 ? "rank-1" : "";
-                    const icon = i === 0 ? "👑" : (i===1 ? "🥈" : (i===2?"🥉":""));
+                    const points = entry[1];
+                    let rank = "🌱 مبتدئ";
+                    let badgeColor = "#777";
+                    
+                    if(points > 1000) { rank = "⚡ زعيم"; badgeColor = "#f72585"; }
+                    else if(points > 500) { rank = "👑 أسطورة"; badgeColor = "#ffd166"; }
+                    else if(points > 100) { rank = "🛡️ محترف"; badgeColor = "#4cc9f0"; }
+
+                    const progress = Math.min((points / 1000) * 100, 100);
+
                     html += `<tr>
-                        <td class="${rankClass}">${icon} ${entry[0]}</td>
-                        <td><b>${entry[1]}</b> عملية</td>
+                        <td width="30%"><span style="color:${badgeColor}">${i+1}. ${entry[0]}</span></td>
+                        <td>
+                            <div style="display:flex; justify-content:space-between; font-size:0.8em">
+                                <span>${points} XP</span>
+                                <span style="color:${badgeColor}">${rank}</span>
+                            </div>
+                            <div class="xp-bar"><div class="xp-fill" style="width:${progress}%; background:${badgeColor}"></div></div>
+                        </td>
                     </tr>`;
                 });
                 document.getElementById('leaderboardTable').innerHTML = html || "<tr><td>لا توجد بيانات</td></tr>";
             });
         }
 
-        // --- CORE FUNCTIONS ---
-        function update(id, change, name, band) {
-            let found = false, oldV = 0, newV = 0;
-            const valEl = document.getElementById(`val_${id}`);
-            if(valEl) { valEl.classList.remove('pop-anim'); void valEl.offsetWidth; valEl.classList.add('pop-anim'); }
-
-            database.forEach(b => b.accs.forEach(a => {
-                if(a.id === id) { oldV = a.count; a.count += change; if(a.count < 0) a.count = 0; newV = a.count; found = true; }
-            }));
-
-            if(found) {
-                change > 0 ? Sounds.coin.play() : Sounds.click.play(); regenerateText();
-                const type = change > 0 ? "➕ زيادة" : "➖ خصم";
-                logToAll(type, `[${band}] ${name} (${oldV} -> ${newV})`);
-            }
+        function runSmartPrediction() {
+            setTimeout(() => {
+                const totalWealth = parseInt(document.getElementById('stat-wealth').innerText);
+                if(totalWealth < 100) {
+                    document.getElementById('smartAlert').style.display = 'block';
+                    document.getElementById('smartMsg').innerText = "المخزون الكلي منخفض! تشير التحليلات لضغط بيع في الويك إند. يرجى التزويد.";
+                }
+            }, 3000);
         }
 
-        function regenerateText() {
-            let t = "";
-            const currentRaw = document.getElementById('rawDataInput').value;
-            if(currentRaw.startsWith('>>>')) t += currentRaw.split('\n')[0] + "\n\n";
-            
-            database.forEach(b => {
-                t += `# ${b.name}\n`;
-                b.accs.forEach(a => {
-                    // Save: Name:User:Pass:Count:Price:Note:Tag
-                    t += `${a.name} : ${a.user} : ${a.pass} : ${a.count} : ${a.price} : ${a.note} : ${a.tag}\n`;
-                });
-                t += "\n";
-            });
-            
-            // Append Trash
-            if(trashBin.length > 0) {
-                t += `### TRASH ###\n`;
-                trashBin.forEach(a => {
-                    t += `${a.name} : ${a.user} : ${a.pass} : ${a.count} : ${a.price} : ${a.note} : ${a.tag}\n`;
-                });
-            }
-
-            db.ref('shared_data').set(t);
+        function updateBandPrice(bandName, newPrice) {
+            const band = database.find(b => b.name === bandName);
+            if(band) { band.price = parseFloat(newPrice) || 0; regenerateText(); logToAll("💲 تسعير", `تعديل سعر [${bandName}]`); }
         }
-
-        // --- HELPERS ---
-        function smartPaste(input) {
-            const val = input.value;
-            if(val.includes(':')) {
-                const parts = val.split(':');
-                input.value = parts[0].trim();
-                document.getElementById('newAccPass').value = parts[1].trim();
-                Sounds.magic.play();
-            }
+        function toggleBulkMode() {
+            const modal = document.getElementById('addModal');
+            if(document.getElementById('bulkModeToggle').checked) modal.classList.add('bulk-mode'); else modal.classList.remove('bulk-mode');
         }
-
-        function openAddModal(preSelectedBand = null) {
-            const select = document.getElementById('newAccBand');
-            select.innerHTML = "";
-            database.forEach(b => {
-                const opt = document.createElement('option');
-                opt.value = b.name; opt.innerText = b.name;
-                select.appendChild(opt);
-            });
-            if(preSelectedBand) select.value = preSelectedBand;
-            
-            document.getElementById('newAccName').value = "";
-            document.getElementById('newAccUser').value = "";
-            document.getElementById('newAccPass').value = "";
-            document.getElementById('newAccCount').value = "0";
-            document.getElementById('newAccPrice').value = "";
-
-            document.getElementById('addModal').style.display='block';
-            setTimeout(()=>document.getElementById('addModal').classList.add('active'),10);
-            document.getElementById('overlay').style.display='block';
-        }
-
         function confirmAddAccount() {
             const bandName = document.getElementById('newAccBand').value;
-            const name = document.getElementById('newAccName').value.trim();
-            const user = document.getElementById('newAccUser').value.trim();
-            const pass = document.getElementById('newAccPass').value.trim();
-            const count = document.getElementById('newAccCount').value.trim();
-            const price = document.getElementById('newAccPrice').value.trim();
-
-            if(!name || !user) { alert("البيانات ناقصة!"); return; }
-
             const band = database.find(b => b.name === bandName);
-            if(band) {
-                band.accs.push({
-                    name, user, pass, 
-                    count: parseInt(count) || 0,
-                    price: parseFloat(price) || 0,
-                    note: "", tag: "",
-                    id: 'acc_' + Math.random().toString(36).substr(2, 9)
+            if(!band) return;
+            const isBulk = document.getElementById('bulkModeToggle').checked;
+            let addedCount = 0;
+            if(isBulk) {
+                const lines = document.getElementById('bulkInput').value.split('\n');
+                lines.forEach(l => {
+                    if(l.trim()) {
+                        let parts = l.split(':');
+                        let user, pass, name;
+                        if(parts.length >= 3) { name=parts[0].trim(); user=parts[1].trim(); pass=parts[2].trim(); }
+                        else if(parts.length === 2) { user=parts[0].trim(); name=user; pass=parts[1].trim(); }
+                        if(user && pass) { band.accs.push({ name, user, pass, count:0, note:"", tag:"", id:'acc_'+Math.random(), originalBand: bandName }); addedCount++; }
+                    }
                 });
-                regenerateText();
-                logToAll("🆕 إضافة", `[${bandName}] تمت إضافة ${name}`);
-                Sounds.magic.play(); closeModals();
+            } else {
+                const name = document.getElementById('newAccName').value.trim();
+                const user = document.getElementById('newAccUser').value.trim();
+                const pass = document.getElementById('newAccPass').value.trim();
+                const count = document.getElementById('newAccCount').value.trim();
+                if(name && user) { band.accs.push({ name, user, pass, count: parseInt(count)||0, note: "", tag: "", id: 'acc_' + Math.random(), originalBand: bandName }); addedCount++; }
+            }
+            if(addedCount > 0) { regenerateText(); logToAll("🆕 إضافة", `إضافة ${addedCount} أكونت لـ [${bandName}] (+${addedCount*10} XP)`); Sounds.magic.play(); closeModals(); }
+        }
+        function restoreFromTrash(accName) {
+            const idx = trashBin.findIndex(a => a.name === accName);
+            if(idx > -1) {
+                const acc = trashBin[idx]; trashBin.splice(idx, 1);
+                let targetBand = database.find(b => b.name === acc.originalBand);
+                if(targetBand) targetBand.accs.push(acc); else if(database.length > 0) database[0].accs.push(acc); else database.push({name: "Restored", accs: [acc], price:0, id:'restored'});
+                regenerateText(); closeModals(); Sounds.magic.play(); logToAll("♻️ استرجاع", `تم استرجاع [${accName}]`);
             }
         }
-
+        function moveToTrash(id, name, bandName) {
+            const band = database.find(b => b.name === bandName); const idx = band.accs.findIndex(a => a.id === id);
+            if(idx > -1) { const acc = band.accs[idx]; acc.originalBand = bandName; trashBin.push(acc); band.accs.splice(idx, 1); regenerateText(); Sounds.trash.play(); logToAll("🗑️ سلة", `نقل [${name}] للسلة`); }
+        }
+        function regenerateText() {
+            let t = ""; const currentRaw = document.getElementById('rawDataInput').value;
+            if(currentRaw.startsWith('>>>')) t += currentRaw.split('\n')[0] + "\n\n";
+            database.forEach(b => { t += `# ${b.name} : ${b.price}\n`; b.accs.forEach(a => { t += `${a.name} : ${a.user} : ${a.pass} : ${a.count} : ${a.note} : ${a.tag} : ${a.originalBand || ''}\n`; }); t += "\n"; });
+            if(trashBin.length > 0) { t += `### TRASH ###\n`; trashBin.forEach(a => { t += `${a.name} : ${a.user} : ${a.pass} : ${a.count} : ${a.note} : ${a.tag} : ${a.originalBand || ''}\n`; }); }
+            db.ref('shared_data').set(t);
+        }
+        function smartPaste(input) { const val = input.value; if(val.includes(':')) { const parts = val.split(':'); input.value = parts[0].trim(); document.getElementById('newAccPass').value = parts[1].trim(); Sounds.magic.play(); } }
+        function emptyTrash() { if(confirm("هل أنت متأكد؟ سيتم الحذف نهائياً!")) { trashBin = []; regenerateText(); closeModals(); Sounds.trash.play(); logToAll("🔥 تنظيف", "تم إفراغ السلة"); } }
+        function openAddModal(preSelectedBand = null) {
+            const select = document.getElementById('newAccBand'); select.innerHTML = "";
+            database.forEach(b => { const opt = document.createElement('option'); opt.value = b.name; opt.innerText = b.name; select.appendChild(opt); });
+            if(preSelectedBand) select.value = preSelectedBand;
+            document.getElementById('newAccName').value = ""; document.getElementById('newAccUser').value = ""; document.getElementById('newAccPass').value = ""; document.getElementById('newAccCount').value = "0";
+            document.getElementById('bulkInput').value = ""; document.getElementById('bulkModeToggle').checked = false; toggleBulkMode();
+            document.getElementById('addModal').style.display='block'; setTimeout(()=>document.getElementById('addModal').classList.add('active'),10); document.getElementById('overlay').style.display='block';
+        }
+        function openTrash() {
+            const list = document.getElementById('trashList'); list.innerHTML = trashBin.length === 0 ? "<div style='color:#777; text-align:center'>السلة فارغة ✅</div>" : "";
+            trashBin.forEach(acc => { list.innerHTML += `<div style="background:rgba(255,255,255,0.05); padding:10px; margin-bottom:5px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;"><span>${acc.name} <small>(${acc.originalBand})</small></span><button class="action-btn btn-success" onclick="restoreFromTrash('${acc.name}')" style="font-size:0.8em">استرجاع</button></div>`; });
+            document.getElementById('trashModal').style.display='block'; setTimeout(()=>document.getElementById('trashModal').classList.add('active'),10); document.getElementById('overlay').style.display='block';
+        }
+        function openDetails(id, bandName) {
+            const band = database.find(b => b.name === bandName); const acc = band.accs.find(a => a.id === id);
+            document.getElementById('editAccId').value = JSON.stringify({id, bandName}); document.getElementById('editNote').value = acc.note || ""; document.getElementById('editTag').value = acc.tag || "";
+            document.querySelectorAll('.tag-option').forEach(el => el.classList.remove('selected'));
+            document.getElementById('detailsModal').style.display='block'; setTimeout(()=>document.getElementById('detailsModal').classList.add('active'),10); document.getElementById('overlay').style.display='block';
+        }
+        function selectTag(color) { document.getElementById('editTag').value = color; document.querySelectorAll('.tag-option').forEach(el => el.classList.remove('selected')); event.target.classList.add('selected'); }
+        function saveDetails() {
+            const meta = JSON.parse(document.getElementById('editAccId').value); const note = document.getElementById('editNote').value; const tag = document.getElementById('editTag').value;
+            const band = database.find(b => b.name === meta.bandName); const acc = band.accs.find(a => a.id === meta.id);
+            acc.note = note.replace(/:/g, '-'); acc.tag = tag; regenerateText(); closeModals(); Sounds.coin.play();
+        }
+        function update(id, change, name, band) {
+            let found = false, oldV = 0, newV = 0; const valEl = document.getElementById(`val_${id}`);
+            if(valEl) { valEl.classList.remove('pop-anim'); void valEl.offsetWidth; valEl.classList.add('pop-anim'); }
+            database.forEach(b => b.accs.forEach(a => { if(a.id === id) { oldV = a.count; a.count += change; if(a.count < 0) a.count = 0; newV = a.count; found = true; } }));
+            if(found) { change > 0 ? Sounds.coin.play() : Sounds.click.play(); regenerateText(); logToAll(change > 0 ? "➕ زيادة" : "➖ خصم", `[${band}] ${name} (${oldV} -> ${newV})`); }
+        }
         function logToAll(action, details) {
             const time = new Date().toLocaleString('ar-EG', {hour:'2-digit', minute:'2-digit'});
             db.ref('system_logs').push({user: currentUser, action, details, time});
             sendDiscord(`**[${currentUser}]** ${action}: ${details}`);
         }
-
-        function sendDiscord(msg) {
-            fetch(DISCORD_WEBHOOK, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ username: "System V32", avatar_url: "https://cdn-icons-png.flaticon.com/512/3665/3665923.png", content: msg }) }).catch(()=>{});
-        }
-
-        function copy(text, soundType) { navigator.clipboard.writeText(text); if(soundType) Sounds[soundType].play(); showToast("تم النسخ بنجاح"); }
+        function sendDiscord(msg) { fetch(DISCORD_WEBHOOK, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ username: "System V37", avatar_url: "https://cdn-icons-png.flaticon.com/512/3665/3665923.png", content: msg }) }).catch(()=>{}); }
+        function copy(text, soundType) { navigator.clipboard.writeText(text); if(soundType) Sounds[soundType].play(); showToast("تم النسخ"); }
         function showToast(msg) { const t = document.getElementById('toast'); document.getElementById('toastMsg').innerText = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2000); }
         function copyAllCombos() { let t = ""; database.forEach(b => b.accs.forEach(a => t += `${a.user}:${a.pass}\n`)); copy(t, 'magic'); }
-        function saveData() { const txt = document.getElementById('rawDataInput').value; db.ref('shared_data').set(txt); closeModals(); Sounds.magic.play(); logToAll("🛠️ تعديل", "تحديث شامل من المحرر"); }
+        function saveData() { const txt = document.getElementById('rawDataInput').value; db.ref('shared_data').set(txt); closeModals(); Sounds.magic.play(); logToAll("🛠️ تعديل", "تحديث شامل"); }
         function openEditor() { document.getElementById('editorModal').style.display='block'; setTimeout(()=>document.getElementById('editorModal').classList.add('active'),10); document.getElementById('overlay').style.display='block'; }
         function closeModals() { document.querySelectorAll('.modal').forEach(m => { m.classList.remove('active'); setTimeout(()=>m.style.display='none',300); }); document.getElementById('overlay').style.display='none'; }
-        
-        document.onkeydown = function(evt) { 
-            if (evt.key === "Escape") closeModals(); 
-            if (evt.altKey && evt.key === 'n') { evt.preventDefault(); openAddModal(); } 
-            if (evt.altKey && evt.key === 'f') { evt.preventDefault(); document.getElementById('searchInput').focus(); }
-        };
+        document.onkeydown = function(evt) { if (evt.key === "Escape") closeModals(); if (evt.altKey && evt.key === 'n') { evt.preventDefault(); openAddModal(); } if (evt.altKey && evt.key === 'f') { evt.preventDefault(); document.getElementById('searchInput').focus(); } };
     </script>
 </body>
 </html>
