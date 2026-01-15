@@ -3,407 +3,625 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ELBDRAWY System (Online)</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <title>ELBDRAWY Enterprise (V32)</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+    
     <style>
-        /* --- Themes Variables --- */
+        /* --- THEME --- */
         :root {
-            --primary: #2563eb; --bg: #f1f5f9; --card-bg: #ffffff; --text: #0f172a;
-            --band-head: #cbd5e1; --border: #e2e8f0; --success: #059669; --danger: #ef4444;
-            --shadow: rgba(0,0,0,0.05);
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            --primary: #4cc9f0; --success: #06d6a0; --danger: #ef476f; --warning: #ffd166; --info: #4895ef;
         }
-        body.dark-mode {
-            --primary: #3b82f6; --bg: #0f172a; --card-bg: #1e293b; --text: #f8fafc;
-            --band-head: #334155; --border: #475569; --shadow: rgba(0,0,0,0.3);
+        body {
+            font-family: 'Cairo', sans-serif; margin: 0; padding: 0;
+            background: linear-gradient(45deg, #0f0c29, #302b63, #24243e);
+            background-size: 400% 400%; animation: gradientBG 15s ease infinite;
+            color: white; min-height: 100vh; overflow-x: hidden;
         }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 15px; font-size: 14px; transition: 0.3s; }
+        @keyframes gradientBG { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
 
-        /* Loading Indicator */
-        #loadingBar {
-            position: fixed; top: 0; left: 0; width: 0%; height: 4px; background: #2563eb; z-index: 10000; transition: 0.3s;
+        /* --- UI COMPONENTS --- */
+        .glass-panel {
+            background: var(--glass-bg); backdrop-filter: blur(8px);
+            border: 1px solid var(--glass-border); border-radius: 16px;
+            box-shadow: var(--glass-shadow); padding: 15px; margin-bottom: 20px;
         }
 
-        /* --- Login Screen --- */
-        #loginScreen {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #0f172a; z-index: 9999;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            color: white;
-        }
-        .login-box { background: #1e293b; padding: 40px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center; border: 1px solid #334155; width: 300px; }
-        .login-input { width: 100%; padding: 10px; margin: 15px 0; border-radius: 6px; border: 1px solid #475569; background: #0f172a; color: white; text-align: center; font-size: 1.2em; outline: none; box-sizing: border-box; }
-        .login-input:focus { border-color: #3b82f6; }
-        .login-btn { width: 100%; padding: 10px; background: #2563eb; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 1.1em; font-weight: bold; transition: 0.2s; }
-        .login-btn:hover { background: #1d4ed8; }
-        .error-msg { color: #ef4444; margin-top: 10px; display: none; font-size: 0.9em; }
-
-        /* --- Layout --- */
-        .main-content { display: none; }
-        .header-container { max-width: 1600px; margin: 0 auto 20px auto; display: flex; flex-direction: column; gap: 15px; }
-        .stats-dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; background: var(--card-bg); padding: 15px; border-radius: 12px; box-shadow: 0 4px 6px var(--shadow); border: 1px solid var(--border); }
-        .stat-item { display: flex; flex-direction: column; align-items: center; padding: 10px; border-radius: 8px; background: var(--bg); }
-        .stat-label { font-size: 0.9em; opacity: 0.8; margin-bottom: 5px; }
-        .stat-value { font-size: 1.5em; font-weight: bold; color: var(--primary); }
+        .main-content { padding: 20px; max-width: 1600px; margin: 0 auto; display: none; }
         
-        .main-controls { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; background: var(--card-bg); padding: 10px; border-radius: 12px; border: 1px solid var(--border); }
-        .left-controls, .right-controls { display: flex; gap: 8px; flex-wrap: wrap; }
+        /* Dashboard Grid */
+        .dashboard-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+        @media (max-width: 900px) { .dashboard-grid { grid-template-columns: 1fr; } }
 
-        .btn { background: var(--bg); color: var(--text); border: 1px solid var(--border); padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; gap: 6px; transition: 0.2s; font-weight: 500; }
-        .btn:hover { background: var(--primary); color: white; border-color: var(--primary); }
-        .btn-primary { background: var(--primary); color: white; border: none; }
-        .btn-success { background: var(--success); color: white; border: none; }
-        .btn-icon-only { padding: 8px; }
+        .stats-dashboard { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; text-align: center; }
+        .stat-value { font-size: 1.8em; font-weight: 900; color: var(--primary); display: block;}
+        .stat-label { font-size: 0.8em; opacity: 0.7; }
+
+        /* Leaderboard */
+        .leaderboard-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .leaderboard-table th { text-align: right; color: var(--warning); padding: 5px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .leaderboard-table td { padding: 8px 5px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .rank-1 { color: #ffd700; text-shadow: 0 0 10px #ffd700; } 
+
+        .controls-bar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .action-btn {
+            background: rgba(255,255,255,0.1); border: 1px solid var(--glass-border);
+            color: white; padding: 8px 15px; border-radius: 8px; cursor: pointer;
+            transition: 0.2s; display: flex; align-items: center; gap: 8px; font-family: 'Cairo';
+        }
+        .action-btn:hover { background: rgba(255,255,255,0.2); transform: translateY(-2px); }
+        .btn-primary { background: var(--primary); color: #000; border: none; }
+        .btn-success { background: var(--success); color: #000; border: none; }
+        .btn-danger { color: var(--danger); border-color: var(--danger); }
         
-        /* حالة الاتصال */
-        .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 0.8em; font-weight: bold; display: flex; align-items: center; gap: 5px; }
-        .status-online { background: #dcfce7; color: #166534; }
-        .status-offline { background: #fee2e2; color: #991b1b; }
-
-        .search-box { background: var(--bg); color: var(--text); border: 1px solid var(--border); padding: 8px 15px; border-radius: 6px; outline: none; min-width: 250px; }
+        .search-box {
+            background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border);
+            color: white; padding: 10px 20px; border-radius: 30px;
+            width: 300px; text-align: center; font-family: 'Cairo'; outline: none;
+        }
         .search-box:focus { border-color: var(--primary); }
 
-        /* --- Editor & Grid --- */
-        #editorSection { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 800px; background: var(--card-bg); padding: 20px; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); border: 1px solid var(--border); z-index: 1000; }
-        .overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; backdrop-filter: blur(3px); }
-        textarea { width: 100%; height: 300px; padding: 15px; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 8px; resize: vertical; font-family: monospace; box-sizing: border-box; }
-
-        .bands-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; max-width: 1600px; margin: 0 auto; align-items: start; }
-        .band-column { background: var(--border); border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; border-top: 4px solid var(--primary); transition: all 0.3s; }
-        .band-column[data-name="Duplicate_Found"] { border-top-color: #f59e0b; }
-        .band-header { background: var(--band-head); padding: 10px 15px; font-weight: bold; color: var(--text); display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none; }
-        .band-copy-btn { background: rgba(255,255,255,0.2); border: none; color: var(--text); border-radius: 4px; padding: 4px 8px; font-size: 0.8rem; cursor: pointer; }
-        .band-copy-btn:hover { background: var(--primary); color: white; }
-        .band-body { padding: 10px; display: flex; flex-direction: column; gap: 10px; background: var(--bg); }
-        .collapsed .band-body { display: none; }
-
-        .account-card { background: var(--card-bg); padding: 10px; border-radius: 6px; box-shadow: 0 1px 2px var(--shadow); border: 1px solid var(--border); position: relative; transition: transform 0.2s; }
-        .account-card:hover { transform: translateY(-2px); border-color: var(--primary); }
-
-        /* List View */
-        .list-view .bands-container { grid-template-columns: 1fr; max-width: 1000px; }
-        .list-view .band-column { background: transparent; border: none; border-top: none; }
-        .list-view .band-header { border-radius: 8px; margin-bottom: 5px; }
-        .list-view .band-body { padding: 0; background: transparent; gap: 5px; }
-        .list-view .account-card { display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr auto; align-items: center; gap: 10px; padding: 5px 15px; }
-        .list-view .data-row { background: transparent; border: none; margin: 0; }
-        .list-view .acc-top { margin: 0; display: contents; }
-        .list-view .delete-btn { margin-left: auto; }
-        .list-view .counter-row { margin: 0; background: transparent; border: none; padding: 0; justify-content: flex-end; }
-        .list-view .icon-btn { display: none; }
-
-        /* Components */
-        .acc-name-btn { background: none; border: none; font-weight: bold; color: var(--primary); font-size: 1rem; cursor: pointer; text-align: right; padding: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .acc-name-btn:hover { text-decoration: underline; }
-        .combo-btn { background: var(--bg); color: var(--text); border: 1px solid var(--border); padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; cursor: pointer; margin-right: 5px; }
-        .combo-btn:hover { background: var(--primary); color: white; }
-        .data-text { font-family: monospace; color: var(--text); opacity: 0.8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        /* Bands & Cards */
+        .bands-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; align-items: start; }
+        .band-column {
+            background: rgba(0,0,0,0.2); border-radius: 12px; overflow: hidden;
+            border: 1px solid var(--glass-border); transition: 0.3s;
+        }
+        .band-column.collapsed .band-body { display: none; }
+        .band-header {
+            background: linear-gradient(90deg, rgba(76, 201, 240, 0.1), transparent);
+            padding: 10px 15px; font-weight: bold;
+            display: flex; justify-content: space-between; align-items: center;
+        }
         
-        .counter-row { display: flex; align-items: center; justify-content: space-between; background: rgba(5, 150, 105, 0.1); border: 1px solid rgba(5, 150, 105, 0.3); border-radius: 4px; padding: 4px; margin-top: 8px; }
-        .counter-input { width: 50px; background: transparent; border: none; color: var(--success); font-weight: bold; text-align: center; font-family: monospace; font-size: 1.1em; }
-        .counter-btn { width: 24px; height: 24px; border-radius: 4px; border: none; cursor: pointer; color: white; font-weight: bold; display: flex; align-items: center; justify-content: center; }
-        .c-plus { background: var(--success); }
-        .c-minus { background: var(--danger); }
+        .account-card {
+            background: rgba(255,255,255,0.03); margin: 10px; padding: 12px;
+            border-radius: 10px; border: 1px solid transparent; position: relative; transition: 0.3s;
+            border-right: 3px solid transparent; /* For Tags */
+        }
+        .account-card:hover { background: rgba(255,255,255,0.07); transform: translateY(-3px); }
+        
+        /* TAGS COLORS */
+        .tag-red { border-right-color: var(--danger) !important; background: linear-gradient(90deg, rgba(239, 71, 111, 0.1), transparent); }
+        .tag-green { border-right-color: var(--success) !important; background: linear-gradient(90deg, rgba(6, 214, 160, 0.1), transparent); }
+        .tag-yellow { border-right-color: var(--warning) !important; background: linear-gradient(90deg, rgba(255, 209, 102, 0.1), transparent); }
 
-        #toast { visibility: hidden; min-width: 250px; background-color: #333; color: #fff; text-align: center; border-radius: 8px; padding: 12px; position: fixed; z-index: 2000; left: 50%; bottom: 30px; transform: translateX(-50%); display: flex; align-items: center; justify-content: space-between; gap: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
-        #toast.show { visibility: visible; animation: fadein 0.3s; }
-        .undo-btn { background: white; color: #333; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-weight: bold; }
-        @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
+        .acc-note { font-size: 0.8em; color: var(--warning); margin-top: 5px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+        .acc-price { position: absolute; top: 12px; left: 12px; font-size: 0.9em; color: var(--success); font-weight: bold; }
+
+        .acc-name { color: var(--primary); font-weight: bold; font-size: 1.1em; cursor: pointer; }
+        .data-text { font-family: monospace; color: #ccc; font-size: 0.9em; margin: 5px 0; }
+        
+        .counter-box { display: flex; align-items: center; justify-content: space-between; background: rgba(0,0,0,0.3); border-radius: 8px; padding: 5px; margin-top: 10px; }
+        .count-btn { width: 30px; height: 30px; border-radius: 6px; border: none; cursor: pointer; font-weight: bold; color: white; display: flex; align-items: center; justify-content: center; }
+        .btn-plus { background: var(--success); } .btn-minus { background: var(--danger); }
+        .count-val { font-size: 1.2em; font-weight: bold; color: white; width: 40px; text-align: center; }
+        
+        .card-actions { display: flex; justify-content: space-between; margin-top: 10px; }
+        .icon-btn { background: none; border: none; color: #777; cursor: pointer; transition: 0.2s; }
+        .icon-btn:hover { color: white; transform: scale(1.2); }
+
+        /* Login & Modals */
+        #loginScreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0f0c29; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .login-glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(16px); padding: 40px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); text-align: center; width: 320px; }
+        .login-input, .modal-input, .modal-select { width: 100%; padding: 12px; margin: 10px 0; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); border-radius: 8px; color: white; text-align: center; font-family: 'Cairo'; outline: none; box-sizing: border-box;}
+        .modal-select { text-align: right; background: #1a1a2e; }
+        .glow-btn { width: 100%; padding: 12px; background: linear-gradient(90deg, #4cc9f0, #4361ee); border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; margin-top: 10px; font-family: 'Cairo'; }
+        
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); z-index: 998; display: none; }
+        .modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.9); width: 90%; max-width: 600px; background: #1a1a2e; border: 1px solid var(--glass-border); border-radius: 16px; padding: 25px; z-index: 999; display: none; opacity: 0; transition: 0.3s; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+        .modal.active { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        textarea { width: 100%; height: 300px; background: #0f0c29; border: 1px solid #333; color: var(--success); padding: 15px; border-radius: 8px; font-family: monospace; }
+
+        .tag-option { display: inline-block; width: 20px; height: 20px; border-radius: 50%; margin: 0 5px; cursor: pointer; border: 2px solid transparent; }
+        .tag-option.selected { border-color: white; transform: scale(1.2); }
+
+        #toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(100px); background: white; color: #000; padding: 12px 25px; border-radius: 30px; font-weight: bold; z-index: 2000; transition: 0.4s; opacity: 0; }
+        #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+        .version-tag { position: fixed; top: 10px; right: 10px; background: #059669; color: white; padding: 5px 10px; border-radius: 5px; font-weight: bold; z-index: 99999; }
+        .news-ticker { background: rgba(0,0,0,0.5); color: var(--warning); padding: 8px 0; font-weight: bold; white-space: nowrap; overflow: hidden; }
+        .ticker-content { display: inline-block; animation: ticker 20s linear infinite; padding-left: 100%; }
+        @keyframes ticker { 0% { transform: translateX(0); } 100% { transform: translateX(100%); } }
     </style>
 </head>
 <body>
-    <div id="loadingBar"></div>
+    
+    <div class="version-tag">V32 - ENTERPRISE</div>
+    <div class="news-ticker"><div class="ticker-content" id="newsTicker">>>> V32: تم إضافة سلة المحذوفات + نظام الملاحظات + تسعير المخزون + لوحة المتصدرين 🏆</div></div>
 
     <div id="loginScreen">
-        <div class="login-box">
-            <h2 style="margin:0 0 20px 0; color:#3b82f6;">ELBDRAWY ONLINE</h2>
-            <div style="font-size:3em; margin-bottom:20px;">🌐</div>
-            <p>أدخل كلمة المرور للمتابعة</p>
-            <input type="password" id="passInput" class="login-input" placeholder="Password">
-            <button class="login-btn" onclick="checkLogin()">دخول</button>
-            <div id="loginError" class="error-msg">كلمة المرور غير صحيحة!</div>
+        <div class="login-glass">
+            <h2 style="color:white; margin-bottom:5px;">ELBDRAWY SYSTEM</h2>
+            <input type="text" id="usernameInput" class="login-input" placeholder="اسم المستخدم">
+            <input type="password" id="passInput" class="login-input" placeholder="كلمة المرور">
+            <button class="glow-btn" onclick="checkLogin()">دخول 🔓</button>
+            <div id="loginError" style="color:var(--danger); margin-top:10px; display:none;">⛔ دخول مرفوض!</div>
         </div>
     </div>
 
     <div class="main-content" id="mainApp">
         <div class="header-container">
-            <div class="stats-dashboard">
-                <div class="stat-item"><span class="stat-label"><i class="fas fa-users"></i> إجمالي الأكونتات</span><span class="stat-value" id="stat-total-acc">0</span></div>
-                <div class="stat-item"><span class="stat-label"><i class="fas fa-coins"></i> إجمالي الثروة</span><span class="stat-value" id="stat-total-wealth">0</span></div>
-                <div class="stat-item"><span class="stat-label"><i class="fas fa-trophy"></i> أغنى باند</span><span class="stat-value" id="stat-rich-band" style="font-size: 1em;">-</span></div>
-            </div>
-
-            <div class="main-controls">
-                <div class="right-controls">
-                    <button class="btn btn-primary" onclick="toggleEditor()"><i class="fas fa-edit"></i> تعديل</button>
-                    <button class="btn btn-success" onclick="copyAllCombos()"><i class="fas fa-copy"></i> نسخ الكل</button>
-                    <button class="btn" onclick="toggleView()" id="viewBtn"><i class="fas fa-list"></i> List View</button>
+            <div class="dashboard-grid">
+                <div class="glass-panel stats-dashboard">
+                    <div class="stat-item"><span class="stat-value" id="stat-acc">0</span><span class="stat-label">أكونتات</span></div>
+                    <div class="stat-item"><span class="stat-value" id="stat-wealth" style="color:var(--warning)">0</span><span class="stat-label">عدد كلي</span></div>
+                    <div class="stat-item"><span class="stat-value" id="stat-value" style="color:var(--success)">0$</span><span class="stat-label">قيمة المخزون 💲</span></div>
+                    <div class="stat-item"><span class="stat-value" id="currentUserDisplay" style="color:var(--info)">-</span><span class="stat-label">المستخدم</span></div>
                 </div>
                 
-                <input type="text" id="searchInput" class="search-box" placeholder="بحث سريع..." onkeyup="renderAccounts()">
-                
-                <div class="left-controls">
-                    <div id="connectionStatus" class="status-badge status-offline">🔴 Offline</div>
-                    <button class="btn" onclick="toggleZeroBalance()" id="filterBtn"><i class="fas fa-eye-slash"></i> إخفاء 0</button>
-                    <button class="btn btn-dark" onclick="downloadFullBackup()" title="حفظ البرنامج كامل"><i class="fas fa-save"></i></button>
-                    <button class="btn btn-icon-only" onclick="toggleDarkMode()"><i class="fas fa-moon"></i></button>
-                    <button class="btn btn-icon-only" onclick="lockScreen()" style="color:#ef4444" title="قفل الشاشة"><i class="fas fa-lock"></i></button>
+                <div class="glass-panel" style="overflow-y: auto; max-height: 150px;">
+                    <h4 style="margin:0 0 10px 0; color:var(--warning); text-align:center"><i class="fas fa-trophy"></i> لوحة المتصدرين (Live)</h4>
+                    <table class="leaderboard-table" id="leaderboardTable">
+                        <tr><td>جاري التحميل...</td></tr>
+                    </table>
                 </div>
             </div>
-        </div>
 
-        <div class="overlay" id="overlay" onclick="toggleEditor()"></div>
-        <div id="editorSection">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <h3 style="margin:0; color:var(--text);">📝 إدارة البيانات (Live Sync)</h3>
-                <div style="display: flex; gap: 8px;">
-                    <button class="btn" onclick="isolateDuplicates()" style="background:#f59e0b; color:white; border:none;">⚠️ عزل المتكرر</button>
-                    <button class="btn" onclick="pasteFromClipboard()">📋 لصق</button>
+            <div class="glass-panel controls-bar">
+                <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                    <button class="action-btn btn-success" onclick="openAddModal()"><i class="fas fa-plus-circle"></i> إضافة (Alt+N)</button>
+                    <button class="action-btn btn-danger" onclick="openTrash()"><i class="fas fa-trash-restore"></i> السلة ♻️</button>
+                    <button class="action-btn btn-primary" onclick="openEditor()"><i class="fas fa-terminal"></i> المحرر</button>
+                    <button class="action-btn" onclick="copyAllCombos()"><i class="fas fa-copy"></i> نسخ الكل</button>
                 </div>
+                <input type="text" id="searchInput" class="search-box" placeholder="🔎 بحث (Alt+F)..." onkeyup="renderAccounts()">
+                <button class="action-btn" style="color:var(--danger); border-color:var(--danger)" onclick="logout()">خروج</button>
             </div>
-            <textarea id="rawDataInput" placeholder="User : Pass"></textarea>
-            <br><br>
-            <button class="btn btn-primary" onclick="manualSave()" style="width: 100%; justify-content: center;">حفظ وإرسال للجميع ☁️</button>
         </div>
-
         <div id="app" class="bands-container"></div>
-        <div id="toast"><span id="toastMsg">تم</span><button class="undo-btn" id="undoBtn" onclick="undoAction()">تراجع ↩️</button></div>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+    <div class="overlay" id="overlay" onclick="closeModals()"></div>
+    
+    <div id="addModal" class="modal">
+        <h3 style="color: white; margin-top:0;">⚡ إضافة سريعة</h3>
+        <select id="newAccBand" class="modal-select"></select>
+        <input type="text" id="newAccName" class="modal-input" placeholder="اسم الأكونت">
+        <input type="text" id="newAccUser" class="modal-input" placeholder="اليوزر (أو الصق user:pass)" oninput="smartPaste(this)">
+        <input type="text" id="newAccPass" class="modal-input" placeholder="الباسورد">
+        <input type="number" id="newAccCount" class="modal-input" placeholder="الرصيد" value="0">
+        <input type="number" id="newAccPrice" class="modal-input" placeholder="السعر (اختياري) 💲">
+        <button class="glow-btn" onclick="confirmAddAccount()">إضافة ✅</button>
+    </div>
 
-        // --- مفاتيح الربط الخاصة بيك ---
-        const firebaseConfig = {
-            apiKey: "AIzaSyBCDyJtEVXt9-UXyuT7mQBmElCNer2neNE",
-            authDomain: "elbdrawy.firebaseapp.com",
-            projectId: "elbdrawy",
-            storageBucket: "elbdrawy.firebasestorage.app",
-            messagingSenderId: "599472644586",
-            appId: "1:599472644586:web:b13c2430770691c8ea1293",
-            measurementId: "G-0E5QET6D7D"
-        };
+    <div id="detailsModal" class="modal">
+        <h3 style="color: white; margin-top:0;">🏷️ تعديل التفاصيل</h3>
+        <input type="hidden" id="editAccId">
+        <label>السعر ($)</label>
+        <input type="number" id="editPrice" class="modal-input" placeholder="0">
+        <label>ملاحظة</label>
+        <input type="text" id="editNote" class="modal-input" placeholder="اكتب ملحوظة...">
+        <label>الحالة (Tag)</label>
+        <div style="text-align:center; margin: 10px 0;">
+            <span class="tag-option" style="background:var(--danger)" onclick="selectTag('red')"></span>
+            <span class="tag-option" style="background:var(--success)" onclick="selectTag('green')"></span>
+            <span class="tag-option" style="background:var(--warning)" onclick="selectTag('yellow')"></span>
+            <span class="tag-option" style="border:1px solid #555" onclick="selectTag('')">❌</span>
+        </div>
+        <input type="hidden" id="editTag">
+        <button class="glow-btn" onclick="saveDetails()">حفظ التعديلات 💾</button>
+    </div>
 
-        const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
-        
-        window.saveToFirebase = function(data) {
-            document.getElementById('loadingBar').style.width = '50%';
-            set(ref(db, 'shared_data'), data)
-                .then(() => {
-                    document.getElementById('loadingBar').style.width = '100%';
-                    setTimeout(() => document.getElementById('loadingBar').style.width = '0%', 500);
-                    showToast("تم الحفظ والمزامنة ☁️");
-                })
-                .catch((error) => {
-                    alert("خطأ في الحفظ! تأكد من النت: " + error);
-                });
-        };
+    <div id="trashModal" class="modal">
+        <h3 style="color: var(--danger); margin-top:0;">♻️ سلة المحذوفات</h3>
+        <div id="trashList" style="max-height: 300px; overflow-y: auto; margin-bottom:10px;"></div>
+        <button class="action-btn btn-danger" style="width:100%; justify-content:center" onclick="emptyTrash()">إفراغ السلة نهائياً 🔥</button>
+    </div>
 
-        const connectedRef = ref(db, ".info/connected");
-        onValue(connectedRef, (snap) => {
-            const statusEl = document.getElementById("connectionStatus");
-            if (snap.val() === true) {
-                statusEl.innerHTML = "🟢 Online";
-                statusEl.className = "status-badge status-online";
-            } else {
-                statusEl.innerHTML = "🔴 Offline";
-                statusEl.className = "status-badge status-offline";
-            }
-        });
+    <div id="editorModal" class="modal">
+        <h3 style="color: white; margin-top:0;">📝 المحرر</h3>
+        <textarea id="rawDataInput"></textarea>
+        <button class="glow-btn" onclick="saveData()">حفظ ونشر 📡</button>
+    </div>
 
-        const dataRef = ref(db, 'shared_data');
-        onValue(dataRef, (snapshot) => {
-            const data = snapshot.val();
-            if (data) {
-                document.getElementById('rawDataInput').value = data;
-                window.parseTextToData(data);
-            } else {
-                // First time setup
-                window.saveToFirebase("# Example\nUser:Pass");
-            }
-        });
-
-    </script>
+    <div id="toast"><i class="fas fa-check-circle"></i> <span id="toastMsg">تم!</span></div>
 
     <script>
-        // Security
-        const APP_PASSWORD = "ELBADRAWY";
-        function checkLogin() {
-            const input = document.getElementById('passInput');
-            if (input.value === APP_PASSWORD) {
-                document.getElementById('loginScreen').style.display = 'none';
-                document.getElementById('mainApp').style.display = 'block';
-                if(localStorage.getItem('theme') === 'dark') document.body.classList.add('dark-mode');
-            } else { document.getElementById('loginError').style.display = 'block'; input.value = ''; input.focus(); }
-        }
-        document.getElementById('passInput').addEventListener('keypress', function(e){ if(e.key === 'Enter') checkLogin(); });
-        function lockScreen() { document.getElementById('mainApp').style.display = 'none'; document.getElementById('loginScreen').style.display = 'flex'; document.getElementById('passInput').value = ''; }
+        // --- SOUNDS ---
+        const Sounds = {
+            coin: new Audio('https://www.myinstants.com/media/sounds/super-mario-coin.mp3'),
+            click: new Audio('https://www.myinstants.com/media/sounds/click_x.mp3'),
+            trash: new Audio('https://www.myinstants.com/media/sounds/discord-leave.mp3'),
+            magic: new Audio('https://www.myinstants.com/media/sounds/fairy-glitter-86721.mp3'),
+            login: new Audio('https://www.myinstants.com/media/sounds/discord-join.mp3')
+        };
+        Object.values(Sounds).forEach(s => s.volume = 0.3);
 
-        // Logic
-        let database = [];
-        let hideZeroBalance = false;
-        let isListView = false;
-        let undoStack = null;
-        let undoTimeout = null;
+        // --- CONFIG ---
+        const DISCORD_WEBHOOK = "https://discord.com/api/webhooks/1461396528089403582/cAmKpW39f8Y_qHmF8PbwHqH4FAlxuQy0s9HRNFA9LOqs8Kn-cfaWriZYNu_BSqL8PXvr";
+        const firebaseConfig = { apiKey: "AIzaSyBCDyJtEVXt9-UXyuT7mQBmElCNer2neNE", authDomain: "elbdrawy.firebaseapp.com", projectId: "elbdrawy", storageBucket: "elbdrawy.firebasestorage.app", messagingSenderId: "599472644586", appId: "1:599472644586:web:b13c2430770691c8ea1293", measurementId: "G-0E5QET6D7D" };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
 
-        window.parseTextToData = function(text) {
-            database = [];
-            const lines = text.split('\n');
-            let currentBand = null;
-            lines.forEach((line) => {
-                let trimmedLine = line.trim();
-                if (!trimmedLine) return;
-                if (trimmedLine.startsWith('#')) {
-                    let bandName = trimmedLine.substring(1).trim();
-                    currentBand = { bandName: bandName, accounts: [], id: 'band_' + Date.now() + Math.random() };
-                    database.push(currentBand);
-                } else if (trimmedLine.includes(':')) {
-                    let parts = trimmedLine.split(':');
-                    let acc = {};
-                    if (parts.length === 2) { 
-                        acc = { id: 'acc_' + Math.random(), name: parts[0].trim(), user: parts[0].trim(), pass: parts[1].trim(), count: 0 };
-                    } else if (parts.length >= 3) {
-                        acc = { id: 'acc_' + Math.random(), name: parts[0].trim(), user: parts[1].trim(), pass: parts[2].trim(), count: parseInt(parts[3]) || 0 };
-                    }
-                    if (acc.id) {
-                        if (!currentBand) { currentBand = { bandName: "ELBDRAWY", accounts: [], id: 'def_band' }; database.push(currentBand); }
-                        currentBand.accounts.push(acc);
-                    }
-                }
-            });
-            renderAccounts();
-        }
-
-        function updateStats() {
-            let totalAcc = 0, totalWealth = 0, richestBandName = "-", maxWealth = -1;
-            database.forEach(band => {
-                let bandWealth = 0;
-                band.accounts.forEach(acc => { totalAcc++; totalWealth += acc.count; bandWealth += acc.count; });
-                if(bandWealth > maxWealth && band.accounts.length > 0) { maxWealth = bandWealth; richestBandName = band.bandName; }
-            });
-            document.getElementById('stat-total-acc').innerText = totalAcc;
-            document.getElementById('stat-total-wealth').innerText = totalWealth.toLocaleString();
-            document.getElementById('stat-rich-band').innerText = richestBandName;
-        }
-
-        function renderAccounts() {
-            updateStats();
-            const searchText = document.getElementById('searchInput').value.toLowerCase();
-            const container = document.getElementById('app');
-            container.innerHTML = '';
-            if(isListView) container.classList.add('list-view'); else container.classList.remove('list-view');
-
-            database.forEach(band => {
-                const filteredAccounts = band.accounts.filter(acc => {
-                    const matchesSearch = acc.name.toLowerCase().includes(searchText) || acc.user.toLowerCase().includes(searchText) || band.bandName.toLowerCase().includes(searchText);
-                    const passesZeroCheck = !hideZeroBalance || acc.count > 0;
-                    return matchesSearch && passesZeroCheck;
-                });
-                if (filteredAccounts.length > 0 || (band.accounts.length > 0 && searchText === '' && !hideZeroBalance)) {
-                    const totalBalance = filteredAccounts.reduce((sum, acc) => sum + acc.count, 0);
-                    let accountsHTML = filteredAccounts.map(acc => `
-                        <div class="account-card">
-                            <div class="acc-top">
-                                <div class="acc-name-group">
-                                    <button class="acc-name-btn" onclick="copyToClipboard('${acc.name}')">${acc.name}</button>
-                                    <button class="combo-btn" onclick="copyCombo('${acc.user}', '${acc.pass}')">Combo</button>
-                                </div>
-                                ${!isListView ? `<button class="delete-btn" onclick="deleteAccount('${acc.id}', '${band.id}')"><i class="fas fa-trash-alt"></i></button>` : ''}
-                            </div>
-                            <div class="data-row"><span class="data-text" title="${acc.user}">${acc.user}</span></div>
-                            ${!isListView ? `<div class="data-row"><span class="data-text">•••••••</span><button class="btn-icon-only" style="background:none; border:none; cursor:pointer; color:var(--primary)" onclick="copyToClipboard('${acc.pass}')"><i class="fas fa-key"></i></button></div>` : ''}
-                            <div class="counter-row">
-                                ${!isListView ? '<span style="font-size:0.8em; color:var(--success)">الرصيد:</span>' : ''}
-                                <button class="counter-btn c-minus" onclick="updateCount('${acc.id}', -1)">-</button>
-                                <input type="number" class="counter-input" value="${acc.count}" onchange="setManualCount('${acc.id}', this.value)">
-                                <button class="counter-btn c-plus" onclick="updateCount('${acc.id}', 1)">+</button>
-                            </div>
-                            ${isListView ? `<button class="delete-btn" onclick="deleteAccount('${acc.id}', '${band.id}')"><i class="fas fa-times"></i></button>` : ''}
-                        </div>
-                    `).join('');
-                    const isDup = band.bandName === "Duplicate_Found";
-                    let bandHTML = `
-                        <div class="band-column" id="${band.id}" data-name="${band.bandName}">
-                            <div class="band-header" onclick="toggleOneBand('${band.id}')">
-                                <div style="display:flex; align-items:center;"><span>${band.bandName}</span><small style="margin-right:8px; opacity:0.7">(${filteredAccounts.length})</small></div>
-                                <div style="display:flex; align-items:center;">
-                                    <button class="band-copy-btn" onclick="event.stopPropagation(); copyBandCombos('${band.id}')"><i class="fas fa-copy"></i></button>
-                                    <span class="total-badge">${totalBalance}</span>
-                                    <i class="fas fa-chevron-down toggle-icon" style="margin-right:5px"></i>
-                                </div>
-                            </div>
-                            <div class="band-body">${accountsHTML}</div>
-                        </div>
-                    `;
-                    container.innerHTML += bandHTML;
-                }
-            });
-        }
-
-        function regenerateTextFromData() { 
-            let txt = ""; 
-            database.forEach(b => { txt += `# ${b.bandName}\n`; b.accounts.forEach(a => txt += `${a.name} : ${a.user} : ${a.pass} : ${a.count}\n`); txt += "\n"; }); 
-            if(window.saveToFirebase) window.saveToFirebase(txt);
-        }
-
-        function deleteAccount(accId, bandId) {
-            let bandIndex = database.findIndex(b => b.id === bandId); if (bandIndex === -1) return;
-            let accIndex = database[bandIndex].accounts.findIndex(a => a.id === accId); if (accIndex === -1) return;
-            undoStack = { account: database[bandIndex].accounts[accIndex], bandId: bandId, index: accIndex };
-            database[bandIndex].accounts.splice(accIndex, 1);
-            regenerateTextFromData(); 
-            showToast("تم الحذف 🗑️", true);
-        }
-        function undoAction() {
-            if (!undoStack) return;
-            let band = database.find(b => b.id === undoStack.bandId);
-            if (band) { band.accounts.splice(undoStack.index, 0, undoStack.account); regenerateTextFromData(); showToast("تم التراجع ✅", false); undoStack = null; }
-        }
-
-        function updateCount(accId, change) { for (let band of database) { let acc = band.accounts.find(a => a.id === accId); if (acc) { acc.count += change; if(acc.count < 0) acc.count = 0; regenerateTextFromData(); return; } } }
-        function setManualCount(accId, val) { for (let band of database) { let acc = band.accounts.find(a => a.id === accId); if (acc) { acc.count = parseInt(val) || 0; if(acc.count < 0) acc.count = 0; regenerateTextFromData(); return; } } }
+        // --- AUTH ---
+        const APP_PASS = "ELBADRAWY";
+        const ALLOWED = ["Adham Zng", "Belal Zng", "Amar Zng", "Adham Normal", "Belal Kersha"];
+        let currentUser = localStorage.getItem('currentUser');
         
-        function isolateDuplicates() {
-            if(!confirm("نقل المتكرر لقسم 'Duplicate_Found'؟")) return;
-            const seen = new Set(); const dups = []; let newDB = [];
-            database.forEach(band => {
-                if(band.bandName === "Duplicate_Found") return;
-                const clean = [];
-                band.accounts.forEach(acc => { if(seen.has(acc.user)) dups.push(acc); else { seen.add(acc.user); clean.push(acc); } });
-                band.accounts = clean; if(band.accounts.length || band.bandName !== "Duplicate_Found") newDB.push(band);
+        function checkLogin() {
+            const u = document.getElementById('usernameInput').value.trim();
+            const p = document.getElementById('passInput').value;
+            const validUser = ALLOWED.find(user => user.toLowerCase() === u.toLowerCase());
+            if (validUser && p === APP_PASS) {
+                currentUser = validUser; localStorage.setItem('currentUser', currentUser);
+                Sounds.login.play(); initApp(); sendDiscord(`🟢 **${currentUser}** logged in (V32)`);
+            } else {
+                document.getElementById('loginError').style.display = 'block'; Sounds.trash.play();
+            }
+        }
+        function logout() { localStorage.removeItem('currentUser'); location.reload(); }
+        if(currentUser && ALLOWED.includes(currentUser)) initApp();
+        function initApp() {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('mainApp').style.display = 'block';
+            document.getElementById('currentUserDisplay').innerText = currentUser;
+            loadLeaderboard();
+        }
+
+        // --- LOGIC ---
+        let database = [];
+        let trashBin = [];
+
+        db.ref('shared_data').on('value', snap => {
+            const val = snap.val() || "";
+            document.getElementById('rawDataInput').value = val;
+            parseData(val);
+        });
+
+        function parseData(text) {
+            database = [];
+            trashBin = [];
+            let currentBand = null;
+            const lines = text.split('\n');
+            if(lines.length > 0 && lines[0].startsWith('>>>')) document.getElementById('newsTicker').innerText = lines[0].replace('>>>', '').trim();
+
+            lines.forEach(line => {
+                line = line.trim();
+                if(!line || line.startsWith('>>>')) return;
+                
+                if(line.startsWith('### TRASH ###')) {
+                    currentBand = { name: "TRASH", accs: [] }; // Special handling
+                } else if(line.startsWith('#')) {
+                    currentBand = { name: line.substring(1).trim(), accs: [], id: Math.random().toString(36) };
+                    if(currentBand.name !== "TRASH") database.push(currentBand);
+                } else if(line.includes(':')) {
+                    const p = line.split(':');
+                    // Format: Name:User:Pass:Count:Price:Note:Tag
+                    const acc = {
+                        id: 'acc_' + Math.random().toString(36).substr(2, 9),
+                        name: p[0].trim(),
+                        user: (p[1] || p[0]).trim(),
+                        pass: (p[2] || "").trim(),
+                        count: parseInt(p[3] || 0),
+                        price: parseFloat(p[4] || 0),
+                        note: (p[5] || "").trim(),
+                        tag: (p[6] || "").trim()
+                    };
+                    if(currentBand) {
+                        if(currentBand.name === "TRASH") trashBin.push(acc);
+                        else currentBand.accs.push(acc);
+                    }
+                }
             });
-            if(dups.length) { newDB.push({ bandName: "Duplicate_Found", id: 'dup_'+Date.now(), accounts: dups }); database = newDB; regenerateTextFromData(); showToast(`تم عزل ${dups.length} مكرر`); } else alert("لا يوجد تكرار");
+            render();
         }
 
-        function manualSave() { 
-            const txt = document.getElementById('rawDataInput').value; 
-            if(window.saveToFirebase) window.saveToFirebase(txt);
-            toggleEditor(); 
+        function render() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const container = document.getElementById('app');
+            container.innerHTML = "";
+            let totalAcc = 0, totalWealth = 0, totalValue = 0;
+
+            database.forEach(band => {
+                const visible = band.accs.filter(a => a.name.toLowerCase().includes(search) || a.user.toLowerCase().includes(search));
+                if(visible.length === 0 && search) return;
+
+                let bandWealth = 0;
+                let html = visible.map(acc => {
+                    totalAcc++; totalWealth += acc.count; bandWealth += acc.count;
+                    totalValue += (acc.price * acc.count); // Calculate Inventory Value
+
+                    let cardClass = "account-card";
+                    if(acc.count === 0) cardClass += " out-of-stock";
+                    else if(acc.count < 3) cardClass += " low-stock";
+                    if(acc.tag) cardClass += ` tag-${acc.tag}`;
+
+                    let noteHtml = acc.note ? `<span class="acc-note"><i class="fas fa-sticky-note"></i> ${acc.note}</span>` : '';
+                    let priceHtml = acc.price > 0 ? `<span class="acc-price">${acc.price}$</span>` : '';
+
+                    return `
+                    <div class="${cardClass}" id="${acc.id}">
+                        ${priceHtml}
+                        <div class="acc-top" style="justify-content: flex-end;">
+                            <button class="icon-btn" onclick="openDetails('${acc.id}', '${band.name}')" title="تعديل التفاصيل"><i class="fas fa-pen"></i></button>
+                        </div>
+                        <div style="text-align:center; margin-top:-20px">
+                            <span class="acc-name" onclick="copy('${acc.name}', 'magic')">${acc.name}</span>
+                            <div class="data-text">${acc.user}</div>
+                            ${noteHtml}
+                        </div>
+                        <div class="counter-box">
+                            <button class="count-btn btn-minus" onclick="update('${acc.id}', -1, '${acc.name}', '${band.name}')"><i class="fas fa-minus"></i></button>
+                            <span class="count-val" id="val_${acc.id}">${acc.count}</span>
+                            <button class="count-btn btn-plus" onclick="update('${acc.id}', 1, '${acc.name}', '${band.name}')"><i class="fas fa-plus"></i></button>
+                        </div>
+                        <div class="card-actions">
+                            <button class="action-btn" style="font-size:0.7em; padding:4px" onclick="copy('${acc.user}:${acc.pass}', 'magic')">Combo</button>
+                            <button class="icon-btn" style="color:var(--danger)" onclick="moveToTrash('${acc.id}', '${acc.name}', '${band.name}')"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </div>`;
+                }).join('');
+
+                container.innerHTML += `
+                <div class="band-column">
+                    <div class="band-header">
+                        <div class="band-info" onclick="this.parentElement.parentElement.classList.toggle('collapsed')" style="flex-grow:1; cursor:pointer">
+                            <span>${band.name} <small>(${visible.length})</small> <span style="color:var(--warning)">${bandWealth}💰</span></span>
+                            <i class="fas fa-chevron-down" style="margin-right:5px"></i>
+                        </div>
+                        <button class="quick-add-btn" onclick="openAddModal('${band.name}')" title="إضافة"><i class="fas fa-plus"></i></button>
+                    </div>
+                    <div class="band-body">${html}</div>
+                </div>`;
+            });
+
+            document.getElementById('stat-acc').innerText = totalAcc;
+            document.getElementById('stat-wealth').innerText = totalWealth;
+            document.getElementById('stat-value').innerText = totalValue.toLocaleString() + '$';
         }
 
-        function toggleView() { isListView = !isListView; document.getElementById('viewBtn').innerHTML = isListView ? '<i class="fas fa-th-large"></i> Grid View' : '<i class="fas fa-list"></i> List View'; renderAccounts(); }
-        function toggleDarkMode() { document.body.classList.toggle('dark-mode'); localStorage.setItem('theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light'); }
-        function toggleZeroBalance() { hideZeroBalance = !hideZeroBalance; document.getElementById('filterBtn').style.background = hideZeroBalance ? "var(--border)" : ""; renderAccounts(); }
-        function toggleEditor() { const el = document.getElementById('editorSection'); const ov = document.getElementById('overlay'); const show = el.style.display === 'block'; el.style.display = show ? 'none' : 'block'; ov.style.display = show ? 'none' : 'block'; }
-        function copyBandCombos(bandId) { const b = database.find(x => x.id === bandId); if(!b || !b.accounts.length) return; let t = ""; b.accounts.forEach(a => t += `${a.user}:${a.pass}\n`); navigator.clipboard.writeText(t).then(() => showToast(`تم نسخ ${b.bandName}`)); }
-        function copyAllCombos() { let t = ""; database.forEach(b => b.accounts.forEach(a => t += `${a.user}:${a.pass}\n`)); if(t) navigator.clipboard.writeText(t).then(() => showToast("تم نسخ الكل")); else alert("فارغ"); }
-        function downloadFullBackup() {
-            const currentData = document.getElementById('rawDataInput').value;
-            const safeData = currentData.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$');
-            let htmlContent = document.documentElement.outerHTML;
-            htmlContent = htmlContent.replace(/<script type="module">[\s\S]*?<\/script>/, '');
-            const offlineScript = `<script>localStorage.setItem('myAccountsRaw', \`${safeData}\`); window.location.reload();<\/script>`;
-            const blob = new Blob([htmlContent], {type: "text/html;charset=utf-8"});
-            const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `ELBDRAWY_Backup_${new Date().toISOString().slice(0,10)}.html`; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        // --- NEW FEATURES ACTIONS ---
+        
+        // 1. Recycle Bin
+        function moveToTrash(id, name, bandName) {
+            const band = database.find(b => b.name === bandName);
+            const idx = band.accs.findIndex(a => a.id === id);
+            if(idx > -1) {
+                const acc = band.accs[idx];
+                trashBin.push(acc); // Add to RAM trash
+                band.accs.splice(idx, 1); // Remove from RAM band
+                regenerateText(); // Save both changes
+                Sounds.trash.play();
+                logToAll("🗑️ سلة", `نقل [${name}] إلى سلة المحذوفات`);
+            }
         }
-        async function pasteFromClipboard() { try { document.getElementById('rawDataInput').value += "\n" + await navigator.clipboard.readText(); } catch { alert("برجاء السماح باللصق"); } }
-        function copyToClipboard(t) { navigator.clipboard.writeText(t).then(() => showToast("تم النسخ")); }
-        function copyCombo(u, p) { navigator.clipboard.writeText(`${u}:${p}`).then(() => showToast("تم نسخ الكومبو")); }
-        function showToast(msg, showUndo = false) { const t = document.getElementById("toast"); document.getElementById("toastMsg").innerText = msg; document.getElementById("undoBtn").style.display = showUndo ? "block" : "none"; t.className = "show"; if(undoTimeout) clearTimeout(undoTimeout); undoTimeout = setTimeout(() => { t.className = t.className.replace("show", ""); if(showUndo) undoStack = null; }, 3000); }
-        function toggleOneBand(id) { if(['INPUT','BUTTON','I'].includes(event.target.tagName)) return; document.getElementById(id).classList.toggle('collapsed'); }
-        function toggleAllBands(action) { document.querySelectorAll('.band-column').forEach(b => { if(action==='collapse') b.classList.add('collapsed'); else b.classList.remove('collapsed'); }); }
+
+        function openTrash() {
+            const list = document.getElementById('trashList');
+            list.innerHTML = trashBin.length === 0 ? "<div style='color:#777; text-align:center'>السلة فارغة ✅</div>" : "";
+            
+            trashBin.forEach(acc => {
+                list.innerHTML += `
+                <div style="background:rgba(255,255,255,0.05); padding:10px; margin-bottom:5px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
+                    <span>${acc.name} (${acc.count})</span>
+                    <button class="action-btn btn-success" onclick="restoreFromTrash('${acc.name}')" style="font-size:0.8em">استرجاع</button>
+                </div>`;
+            });
+            
+            document.getElementById('trashModal').style.display='block';
+            setTimeout(()=>document.getElementById('trashModal').classList.add('active'),10);
+            document.getElementById('overlay').style.display='block';
+        }
+
+        function restoreFromTrash(accName) {
+            const idx = trashBin.findIndex(a => a.name === accName);
+            if(idx > -1) {
+                const acc = trashBin[idx];
+                trashBin.splice(idx, 1);
+                // Return to first band by default or create "Restored" band
+                if(database.length > 0) database[0].accs.push(acc);
+                else database.push({name: "Restored", accs: [acc]});
+                
+                regenerateText();
+                closeModals();
+                Sounds.magic.play();
+                logToAll("♻️ استرجاع", `تم استرجاع [${accName}]`);
+            }
+        }
+
+        function emptyTrash() {
+            if(confirm("هل أنت متأكد؟ سيتم حذف هذه الأكونتات نهائياً!")) {
+                trashBin = [];
+                regenerateText();
+                closeModals();
+                Sounds.trash.play();
+                logToAll("🔥 تنظيف", "تم إفراغ سلة المحذوفات");
+            }
+        }
+
+        // 2. Notes & Details
+        function openDetails(id, bandName) {
+            const band = database.find(b => b.name === bandName);
+            const acc = band.accs.find(a => a.id === id);
+            
+            document.getElementById('editAccId').value = JSON.stringify({id, bandName});
+            document.getElementById('editPrice').value = acc.price || 0;
+            document.getElementById('editNote').value = acc.note || "";
+            document.getElementById('editTag').value = acc.tag || "";
+            
+            // UI Selection
+            document.querySelectorAll('.tag-option').forEach(el => el.classList.remove('selected'));
+            
+            document.getElementById('detailsModal').style.display='block';
+            setTimeout(()=>document.getElementById('detailsModal').classList.add('active'),10);
+            document.getElementById('overlay').style.display='block';
+        }
+
+        function selectTag(color) {
+            document.getElementById('editTag').value = color;
+            document.querySelectorAll('.tag-option').forEach(el => el.classList.remove('selected'));
+            event.target.classList.add('selected');
+        }
+
+        function saveDetails() {
+            const meta = JSON.parse(document.getElementById('editAccId').value);
+            const price = document.getElementById('editPrice').value;
+            const note = document.getElementById('editNote').value;
+            const tag = document.getElementById('editTag').value;
+
+            const band = database.find(b => b.name === meta.bandName);
+            const acc = band.accs.find(a => a.id === meta.id);
+            
+            acc.price = parseFloat(price) || 0;
+            acc.note = note.replace(/:/g, '-'); // Prevent format break
+            acc.tag = tag;
+
+            regenerateText();
+            closeModals();
+            Sounds.coin.play();
+        }
+
+        // 3. Leaderboard (Auto-calculated from Firebase Logs)
+        function loadLeaderboard() {
+            db.ref('system_logs').limitToLast(100).on('value', snap => {
+                const stats = {};
+                snap.forEach(s => {
+                    const log = s.val();
+                    if(!stats[log.user]) stats[log.user] = 0;
+                    stats[log.user]++; // Simple activity score
+                });
+
+                const sorted = Object.entries(stats).sort((a,b) => b[1] - a[1]);
+                let html = "";
+                sorted.forEach((entry, i) => {
+                    const rankClass = i === 0 ? "rank-1" : "";
+                    const icon = i === 0 ? "👑" : (i===1 ? "🥈" : (i===2?"🥉":""));
+                    html += `<tr>
+                        <td class="${rankClass}">${icon} ${entry[0]}</td>
+                        <td><b>${entry[1]}</b> عملية</td>
+                    </tr>`;
+                });
+                document.getElementById('leaderboardTable').innerHTML = html || "<tr><td>لا توجد بيانات</td></tr>";
+            });
+        }
+
+        // --- CORE FUNCTIONS ---
+        function update(id, change, name, band) {
+            let found = false, oldV = 0, newV = 0;
+            const valEl = document.getElementById(`val_${id}`);
+            if(valEl) { valEl.classList.remove('pop-anim'); void valEl.offsetWidth; valEl.classList.add('pop-anim'); }
+
+            database.forEach(b => b.accs.forEach(a => {
+                if(a.id === id) { oldV = a.count; a.count += change; if(a.count < 0) a.count = 0; newV = a.count; found = true; }
+            }));
+
+            if(found) {
+                change > 0 ? Sounds.coin.play() : Sounds.click.play(); regenerateText();
+                const type = change > 0 ? "➕ زيادة" : "➖ خصم";
+                logToAll(type, `[${band}] ${name} (${oldV} -> ${newV})`);
+            }
+        }
+
+        function regenerateText() {
+            let t = "";
+            const currentRaw = document.getElementById('rawDataInput').value;
+            if(currentRaw.startsWith('>>>')) t += currentRaw.split('\n')[0] + "\n\n";
+            
+            database.forEach(b => {
+                t += `# ${b.name}\n`;
+                b.accs.forEach(a => {
+                    // Save: Name:User:Pass:Count:Price:Note:Tag
+                    t += `${a.name} : ${a.user} : ${a.pass} : ${a.count} : ${a.price} : ${a.note} : ${a.tag}\n`;
+                });
+                t += "\n";
+            });
+            
+            // Append Trash
+            if(trashBin.length > 0) {
+                t += `### TRASH ###\n`;
+                trashBin.forEach(a => {
+                    t += `${a.name} : ${a.user} : ${a.pass} : ${a.count} : ${a.price} : ${a.note} : ${a.tag}\n`;
+                });
+            }
+
+            db.ref('shared_data').set(t);
+        }
+
+        // --- HELPERS ---
+        function smartPaste(input) {
+            const val = input.value;
+            if(val.includes(':')) {
+                const parts = val.split(':');
+                input.value = parts[0].trim();
+                document.getElementById('newAccPass').value = parts[1].trim();
+                Sounds.magic.play();
+            }
+        }
+
+        function openAddModal(preSelectedBand = null) {
+            const select = document.getElementById('newAccBand');
+            select.innerHTML = "";
+            database.forEach(b => {
+                const opt = document.createElement('option');
+                opt.value = b.name; opt.innerText = b.name;
+                select.appendChild(opt);
+            });
+            if(preSelectedBand) select.value = preSelectedBand;
+            
+            document.getElementById('newAccName').value = "";
+            document.getElementById('newAccUser').value = "";
+            document.getElementById('newAccPass').value = "";
+            document.getElementById('newAccCount').value = "0";
+            document.getElementById('newAccPrice').value = "";
+
+            document.getElementById('addModal').style.display='block';
+            setTimeout(()=>document.getElementById('addModal').classList.add('active'),10);
+            document.getElementById('overlay').style.display='block';
+        }
+
+        function confirmAddAccount() {
+            const bandName = document.getElementById('newAccBand').value;
+            const name = document.getElementById('newAccName').value.trim();
+            const user = document.getElementById('newAccUser').value.trim();
+            const pass = document.getElementById('newAccPass').value.trim();
+            const count = document.getElementById('newAccCount').value.trim();
+            const price = document.getElementById('newAccPrice').value.trim();
+
+            if(!name || !user) { alert("البيانات ناقصة!"); return; }
+
+            const band = database.find(b => b.name === bandName);
+            if(band) {
+                band.accs.push({
+                    name, user, pass, 
+                    count: parseInt(count) || 0,
+                    price: parseFloat(price) || 0,
+                    note: "", tag: "",
+                    id: 'acc_' + Math.random().toString(36).substr(2, 9)
+                });
+                regenerateText();
+                logToAll("🆕 إضافة", `[${bandName}] تمت إضافة ${name}`);
+                Sounds.magic.play(); closeModals();
+            }
+        }
+
+        function logToAll(action, details) {
+            const time = new Date().toLocaleString('ar-EG', {hour:'2-digit', minute:'2-digit'});
+            db.ref('system_logs').push({user: currentUser, action, details, time});
+            sendDiscord(`**[${currentUser}]** ${action}: ${details}`);
+        }
+
+        function sendDiscord(msg) {
+            fetch(DISCORD_WEBHOOK, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ username: "System V32", avatar_url: "https://cdn-icons-png.flaticon.com/512/3665/3665923.png", content: msg }) }).catch(()=>{});
+        }
+
+        function copy(text, soundType) { navigator.clipboard.writeText(text); if(soundType) Sounds[soundType].play(); showToast("تم النسخ بنجاح"); }
+        function showToast(msg) { const t = document.getElementById('toast'); document.getElementById('toastMsg').innerText = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2000); }
+        function copyAllCombos() { let t = ""; database.forEach(b => b.accs.forEach(a => t += `${a.user}:${a.pass}\n`)); copy(t, 'magic'); }
+        function saveData() { const txt = document.getElementById('rawDataInput').value; db.ref('shared_data').set(txt); closeModals(); Sounds.magic.play(); logToAll("🛠️ تعديل", "تحديث شامل من المحرر"); }
+        function openEditor() { document.getElementById('editorModal').style.display='block'; setTimeout(()=>document.getElementById('editorModal').classList.add('active'),10); document.getElementById('overlay').style.display='block'; }
+        function closeModals() { document.querySelectorAll('.modal').forEach(m => { m.classList.remove('active'); setTimeout(()=>m.style.display='none',300); }); document.getElementById('overlay').style.display='none'; }
+        
+        document.onkeydown = function(evt) { 
+            if (evt.key === "Escape") closeModals(); 
+            if (evt.altKey && evt.key === 'n') { evt.preventDefault(); openAddModal(); } 
+            if (evt.altKey && evt.key === 'f') { evt.preventDefault(); document.getElementById('searchInput').focus(); }
+        };
     </script>
 </body>
-
 </html>
